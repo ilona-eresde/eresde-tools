@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invallerslogboek v2</title>
+<style>
+:root{
+  --green:#91b600;--dark:#1f2937;--line:#d9dee7;--bg:#f4f6f8;--soft:#eef3d8;
+  --danger:#fee2e2;--dangerText:#991b1b;--ok:#dcfce7;--okText:#166534;--warn:#fff7ed;--warnText:#9a3412;
+}
+body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:var(--dark)}
+header{background:var(--green);color:white;padding:18px 16px;font-size:23px;font-weight:900}
+main{max-width:980px;margin:auto;padding:14px}
+.card{background:white;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{font-size:14px;font-weight:900;margin-bottom:5px;display:block}
+input,select,textarea{width:100%;box-sizing:border-box;font-size:18px;padding:12px;border:1px solid var(--line);border-radius:11px;background:white}
+textarea{min-height:70px}
+button{font-size:18px;padding:13px 16px;border:0;border-radius:12px;font-weight:900;cursor:pointer}
+.primary{background:var(--green);color:white}.secondary{background:#e5e7eb;color:#111827}.danger{background:var(--danger);color:var(--dangerText)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.small{font-size:13px;color:#6b7280;line-height:1.35}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
+.kpi{background:var(--soft);border-radius:13px;padding:11px;font-weight:900;text-align:center}
+.kpi.open{background:var(--danger);color:var(--dangerText)}
+.kpi .num{font-size:28px;color:var(--green)}.kpi.open .num{color:var(--dangerText)}
+.filters{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+table{width:100%;border-collapse:collapse;margin-top:12px;background:white}
+th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;font-size:14px;vertical-align:top}
+th{background:#f9fafb;font-weight:900}
+.badge{display:inline-block;background:#eef3d8;padding:5px 9px;border-radius:999px;font-weight:900;font-size:13px}
+.statusOpen{display:inline-block;background:var(--danger);color:var(--dangerText);padding:5px 9px;border-radius:999px;font-weight:900;font-size:13px}
+.statusDone{display:inline-block;background:var(--ok);color:var(--okText);padding:5px 9px;border-radius:999px;font-weight:900;font-size:13px}
+.empty{padding:20px;text-align:center;color:#6b7280;font-weight:700}
+.rowActions button{font-size:13px;padding:7px 9px;margin:2px}
+.openList{display:grid;gap:8px;margin-top:10px}
+.openItem{background:var(--danger);color:var(--dangerText);border-radius:13px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.openItem strong{display:block;color:#7f1d1d}
+.editBanner{display:none;background:var(--warn);color:var(--warnText);font-weight:900;border-radius:12px;padding:10px;margin-bottom:12px}
+.reportBox{display:none;background:white}
+.reportBox h1{margin:0 0 6px 0;font-size:22px}
+.reportBox h2{margin:14px 0 6px 0;font-size:17px}
+.reportMeta{font-size:12px;color:#6b7280;margin-bottom:8px}
+.compactStats{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;font-weight:900}
+.compactStats span{background:var(--soft);border-radius:999px;padding:6px 10px}
+.reportBox table{margin-top:6px}
+.reportBox th,.reportBox td{font-size:11px;padding:5px}
+@media print{
+  body.reportMode header,body.reportMode main > section:not(#reportPrintArea){display:none!important}
+  body.reportMode #reportPrintArea{display:block!important;box-shadow:none;border:0;margin:0;padding:0}
+  body.reportMode main{padding:0;max-width:none}
+}
+@media(max-width:760px){
+ .grid,.filters,.summary{grid-template-columns:1fr}
+ button{width:100%}
+ table,thead,tbody,tr,td,th{display:block}
+ thead{display:none}
+ tr{border:1px solid var(--line);border-radius:12px;margin:10px 0;padding:8px;background:white}
+ td{border:0;padding:6px 4px}
+ td:before{content:attr(data-label);display:block;font-weight:900;font-size:12px;color:#6b7280}
+ .rowActions button{width:auto}
+ .openItem{grid-template-columns:1fr}
+}
+@media print{
+ body{background:white}.noPrint{display:none!important}.card{box-shadow:none;border:1px solid #ddd;break-inside:avoid;margin:8px 0;padding:10px}
+ header{color:#111;background:white;border-bottom:4px solid var(--green);padding:10px 0}
+ main{padding:0;max-width:none} th,td{font-size:11px;padding:5px} .summary{grid-template-columns:repeat(4,1fr)} .kpi{padding:6px}
+}
+</style>
+</head>
+<body>
+<header>Invallerslogboek v2</header>
+<main>
+<section class="card noPrint" id="openCard">
+  <h2 style="margin:0 0 8px 0">🔴 Openstaande vervangingen</h2>
+  <div id="openWrap"></div>
+</section>
+
+<section class="card noPrint">
+  <div id="editBanner" class="editBanner">Je bewerkt nu een bestaande regel.</div>
+  <div class="grid">
+    <div><label>Datum</label><input id="datum" type="date"></div>
+    <div><label>Objectleidster</label><select id="objectleidster"><option>Ilona</option><option>Wieteke</option></select></div>
+    <div><label>Project / locatie</label><input id="project" list="projecten" placeholder="Typ project of locatie..."><datalist id="projecten"></datalist></div>
+    <div><label>Reden</label><select id="reden"><option>Ziekte</option><option>Vakantie</option><option>Verlof</option><option>Overig</option></select></div>
+    <div><label>Afwezige medewerker</label><input id="afwezig" placeholder="Naam medewerker"></div>
+    <div><label>Invaller</label><input id="invaller" placeholder="Leeg laten als nog open"></div>
+  </div>
+  <label style="margin-top:12px">Opmerking</label>
+  <textarea id="opmerking" placeholder="Optioneel, bijvoorbeeld bijzonderheden of aangepaste afspraak..."></textarea>
+  <div class="actions">
+    <button class="primary" onclick="saveEntry()" id="saveBtn">Opslaan</button>
+    <button class="secondary" onclick="clearForm()">Velden leegmaken</button>
+  </div>
+  <p class="small">Invaller mag leeg blijven. Dan komt de regel automatisch bij openstaande vervangingen te staan.</p>
+</section>
+
+<section class="card">
+  <h2 style="margin:0 0 8px 0">Overzicht</h2>
+  <div class="summary">
+    <div class="kpi open"><div class="num" id="kpiOpen">0</div>openstaand</div>
+    <div class="kpi"><div class="num" id="kpiVandaag">0</div>vandaag</div>
+    <div class="kpi"><div class="num" id="kpiWeek">0</div>deze week</div>
+    <div class="kpi"><div class="num" id="kpiTotaal">0</div>totaal</div>
+  </div>
+  <div class="filters noPrint" style="margin-top:14px">
+    <div><label>Periode</label><select id="periode" onchange="render()"><option value="week">Deze week</option><option value="today">Vandaag</option><option value="month">Deze maand</option><option value="all">Alles</option></select></div>
+    <div><label>Status</label><select id="filterStatus" onchange="render()"><option value="">Alles</option><option value="open">Open</option><option value="done">Geregeld</option></select></div>
+    <div><label>Objectleidster</label><select id="filterObjectleidster" onchange="render()"><option value="">Allebei</option><option>Ilona</option><option>Wieteke</option></select></div>
+    <div><label>Zoeken</label><input id="zoek" oninput="render()" placeholder="Project, medewerker of invaller"></div>
+  </div>
+  <div class="actions noPrint">
+    <button class="secondary" onclick="exportCsv()">Export naar Excel/CSV</button>
+    <button class="secondary" onclick="printCompactWeekReport()">Urenoverzicht week</button>
+    <button class="secondary" onclick="printAbsenceAnalysis()">Analyse uitval</button>
+    <button class="secondary" onclick="window.print()">Print / PDF</button>
+    <button class="danger" onclick="deleteAll()">Alles wissen</button>
+  </div>
+  <div id="tableWrap"></div>
+</section>
+<section class="card reportBox" id="reportPrintArea"></section>
+</main>
+
+<script>
+const PROJECTS = [
+  "Van der Sluis en Zee - Leeuwarden",
+  "VVE Pier Panderstate - Leeuwarden",
+  "Profile leeuwarden - Leeuwarden",
+  "TZF Emma - Leeuwarden",
+  "TZF COOPMAN - Leeuwarden",
+  "TZF SKROKDAM - Leeuwarden",
+  "TZF ZEVEN - Leeuwarden",
+  "Crossover - Leeuwarden",
+  "Windkracht - Leeuwarden",
+  "Friso bouw - Leeuwarden",
+  "GGD SKROK - Leeuwarden",
+  "Glashandel Martin de boer - Leeuwarden",
+  "Eisma - Leeuwarden",
+  "Thuiszorg akkrum - Akkrum",
+  "De Vos Makelaar - Leeuwarden",
+  "Exalto - Grou",
+  "Rederij Doeksen - Harlingen",
+  "Oosterhof holman - Harlingen",
+  "Orthopraktijk Harlingen - Harlingen",
+  "Piet brouwer - Harlingen",
+  "Finco Energie - Harlingen",
+  "De boer en de groot - Harlingen",
+  "Adonin - Harlingen",
+  "Jongema Logestiek - Harlingen",
+  "Arnold Buringa - Harlingen",
+  "Wesselius - Harlingen",
+  "Cranbarry - Harlingen",
+  "huisartsen havenplein - Harlingen",
+  "Mvgm - Harlingen",
+  "van Swaay - Harlingen",
+  "Damen - Harlingen",
+  "Swan - Harlingen",
+  "Zeezeilers - Harlingen",
+  "Eresde - Harlingen",
+  "BentaCera - Dokkum",
+  "Wetterstins - Bergum",
+  "Omrin Stiens - Stiens",
+  "VVE Walling - Stiens",
+  "Omrin Damwoude - Damwoude",
+  "TZF DAMWOUDE - Damwoude",
+  "De Klinze - Aldtjerk",
+  "Moaiseldsum - Aldtjerk",
+  "Internoord - Leeuwarden",
+  "IPM - Deinum",
+  "Garage Emmakade - Leeuwarden",
+  "DL Plastic - Sint anna",
+  "Thuiszorg - Franeker",
+  "De hertog - Franeker",
+  "Huatamki - Franeker",
+  "Omrin - Franeker",
+  "Offinga - Franeker",
+  "Thuiszorg - Tzummarum",
+  "Roald Morien - Wieuwert",
+  "Annema - Arum",
+  "Connexa - Franeker",
+  "KNKB Voorstraat - Franeker",
+  "KNKB De Trije - Franeker"
+];
+const KEY = "invallerslogboek_v2";
+const OLD_KEY = "invallerslogboek_v1";
+let editingId = null;
+
+datum.valueAsDate = new Date();
+PROJECTS.forEach(p=>{ const opt=document.createElement("option"); opt.value=p; projecten.appendChild(opt); });
+
+function entries(){
+  const current = localStorage.getItem(KEY);
+  if(current) return JSON.parse(current);
+  const old = JSON.parse(localStorage.getItem(OLD_KEY)||"[]");
+  if(old.length){
+    const migrated = old.map(x=>({...x, invaller:x.invaller||""}));
+    localStorage.setItem(KEY, JSON.stringify(migrated));
+    return migrated;
+  }
+  return [];
+}
+function setEntries(list){ localStorage.setItem(KEY, JSON.stringify(list)); }
+function esc(s){ return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+function isOpen(x){ return !String(x.invaller||"").trim(); }
+function statusHtml(x){ return isOpen(x) ? '<span class="statusOpen">🔴 Open</span>' : '<span class="statusDone">🟢 Geregeld</span>'; }
+
+function saveEntry(){
+  if(!datum.value || !project.value.trim() || !afwezig.value.trim()){
+    alert("Vul minimaal datum, project en afwezige medewerker in. Invaller mag leeg blijven.");
+    return;
+  }
+  const item = {
+    id: editingId || Date.now().toString(36)+Math.random().toString(16).slice(2),
+    datum: datum.value,
+    project: project.value.trim(),
+    objectleidster: objectleidster.value,
+    reden: reden.value,
+    afwezig: afwezig.value.trim(),
+    invaller: invaller.value.trim(),
+    opmerking: opmerking.value.trim(),
+    created: editingId ? undefined : new Date().toISOString(),
+    updated: new Date().toISOString()
+  };
+  let list = entries();
+  if(editingId){
+    list = list.map(x=>x.id===editingId ? {...x,...item,created:x.created||item.updated} : x);
+  } else {
+    list.unshift(item);
+  }
+  setEntries(list);
+  const wasOpen = isOpen(item);
+  clearForm(false);
+  render();
+  alert(wasOpen ? "Ziekte/vervanging opgeslagen als openstaand." : "Vervanging opgeslagen als geregeld.");
+}
+function clearForm(resetDate=true){
+  editingId=null; editBanner.style.display="none"; saveBtn.textContent="Opslaan";
+  project.value=""; afwezig.value=""; invaller.value=""; opmerking.value=""; reden.value="Ziekte";
+  if(resetDate) datum.valueAsDate = new Date();
+}
+function edit(id){
+  const x=entries().find(e=>e.id===id); if(!x) return;
+  editingId=id; datum.value=x.datum||""; project.value=x.project||""; objectleidster.value=x.objectleidster||"Ilona"; reden.value=x.reden||"Ziekte";
+  afwezig.value=x.afwezig||""; invaller.value=x.invaller||""; opmerking.value=x.opmerking||"";
+  editBanner.style.display="block"; saveBtn.textContent="Wijziging opslaan";
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+function quickInvaller(id){
+  const name=prompt("Naam invaller invullen:");
+  if(name===null) return;
+  const trimmed=name.trim();
+  if(!trimmed) return;
+  setEntries(entries().map(x=>x.id===id ? {...x, invaller:trimmed, updated:new Date().toISOString()} : x));
+  render();
+}
+function del(id){ if(!confirm("Deze regel verwijderen?")) return; setEntries(entries().filter(x=>x.id!==id)); render(); }
+function deleteAll(){ if(!confirm("Alle invallerregels wissen op dit apparaat?")) return; setEntries([]); render(); }
+function parseLocalDate(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
+function fmtDate(s){ if(!s) return ""; const d=parseLocalDate(s); return d.toLocaleDateString("nl-NL", {day:"2-digit", month:"2-digit", year:"numeric"}); }
+function startOfWeek(d){ const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); return x; }
+function sameDay(a,b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+function inPeriod(item, period){
+  const now=new Date(); const d=parseLocalDate(item.datum);
+  if(period==="today") return sameDay(d,now);
+  if(period==="week") { const s=startOfWeek(now); const e=new Date(s); e.setDate(s.getDate()+7); return d>=s && d<e; }
+  if(period==="month") return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
+  return true;
+}
+function updateKpis(list){
+  kpiOpen.textContent = list.filter(isOpen).length;
+  kpiVandaag.textContent = list.filter(x=>inPeriod(x,"today")).length;
+  kpiWeek.textContent = list.filter(x=>inPeriod(x,"week")).length;
+  kpiTotaal.textContent = list.length;
+}
+function renderOpen(list){
+  const open=list.filter(isOpen).sort((a,b)=>(a.datum||"").localeCompare(b.datum||""));
+  if(!open.length){ openWrap.innerHTML='<div class="empty">Geen openstaande vervangingen.</div>'; return; }
+  openWrap.innerHTML = `<div class="openList">${open.map(x=>`<div class="openItem">
+    <div><strong>${fmtDate(x.datum)} · ${esc(x.project)}</strong>${esc(x.afwezig)} · ${esc(x.reden)} · ${esc(x.objectleidster)}</div>
+    <div><button class="primary" onclick="quickInvaller('${x.id}')">Invaller invullen</button></div>
+  </div>`).join("")}</div>`;
+}
+function render(){
+  const list = entries(); updateKpis(list); renderOpen(list);
+  const q=(zoek.value||"").toLowerCase();
+  let filtered=list.filter(x=>inPeriod(x, periode.value));
+  if(filterStatus.value==="open") filtered=filtered.filter(isOpen);
+  if(filterStatus.value==="done") filtered=filtered.filter(x=>!isOpen(x));
+  if(filterObjectleidster.value) filtered=filtered.filter(x=>x.objectleidster===filterObjectleidster.value);
+  if(q) filtered=filtered.filter(x=>[x.project,x.afwezig,x.invaller,x.reden,x.opmerking,x.objectleidster].join(" ").toLowerCase().includes(q));
+  if(!filtered.length){ tableWrap.innerHTML = '<div class="empty">Geen regels gevonden voor deze selectie.</div>'; return; }
+  tableWrap.innerHTML = `<table>
+    <thead><tr><th>Datum</th><th>Project</th><th>Objectleidster</th><th>Afwezig</th><th>Invaller</th><th>Reden</th><th>Status</th><th>Opmerking</th><th class="noPrint">Actie</th></tr></thead>
+    <tbody>${filtered.map(x=>`<tr>
+      <td data-label="Datum">${fmtDate(x.datum)}</td>
+      <td data-label="Project">${esc(x.project)}</td>
+      <td data-label="Objectleidster"><span class="badge">${esc(x.objectleidster)}</span></td>
+      <td data-label="Afwezig">${esc(x.afwezig)}</td>
+      <td data-label="Invaller"><strong>${esc(x.invaller)||"—"}</strong></td>
+      <td data-label="Reden">${esc(x.reden)}</td>
+      <td data-label="Status">${statusHtml(x)}</td>
+      <td data-label="Opmerking">${esc(x.opmerking)}</td>
+      <td data-label="Actie" class="rowActions noPrint"><button class="secondary" onclick="edit('${x.id}')">Bewerk</button>${isOpen(x)?`<button class="primary" onclick="quickInvaller('${x.id}')">Invaller</button>`:""}<button class="danger" onclick="del('${x.id}')">Verwijder</button></td>
+    </tr>`).join("")}</tbody>
+  </table>`;
+}
+
+function isoWeekInfo(date){
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+  return {year:d.getUTCFullYear(), week:weekNo};
+}
+function weekRangeFromDate(date){
+  const s=startOfWeek(date);
+  const e=new Date(s); e.setDate(s.getDate()+6);
+  return {start:s,end:e};
+}
+function countBy(list, keyFn){
+  const m={};
+  list.forEach(x=>{
+    const k=(keyFn(x)||"—").trim() || "—";
+    m[k]=(m[k]||0)+1;
+  });
+  return Object.entries(m).sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0]));
+}
+function inferRegion(projectName){
+  const s=String(projectName||"");
+  const parts=s.split(" - ");
+  if(parts.length>1) return parts[parts.length-1].trim();
+  const known=["Leeuwarden","Harlingen","Franeker","Dokkum","Bergum","Stiens","Damwoude","Grou","Akkrum","Aldtjerk","Deinum","Tzummarum","Arum"];
+  const hit=known.find(k=>s.toLowerCase().includes(k.toLowerCase()));
+  return hit||"Onbekend";
+}
+function htmlTable(rows, headers, cells){
+  if(!rows.length) return '<div class="empty">Geen gegevens.</div>';
+  return `<table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map(x=>`<tr>${cells(x).map(v=>`<td>${v}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+function activateReport(html){
+  reportPrintArea.innerHTML=html;
+  document.body.classList.add("reportMode");
+  window.print();
+  setTimeout(()=>document.body.classList.remove("reportMode"),500);
+}
+function currentWeekItems(){
+  const base=new Date();
+  const range=weekRangeFromDate(base);
+  const info=isoWeekInfo(base);
+  const list=entries().filter(x=>{
+    if(!x.datum) return false;
+    const d=parseLocalDate(x.datum);
+    return d>=range.start && d<=range.end;
+  }).sort((a,b)=>(a.datum||"").localeCompare(b.datum||"") || (a.project||"").localeCompare(b.project||""));
+  return {list,range,info};
+}
+function printCompactWeekReport(){
+  const {list,range,info}=currentWeekItems();
+  const open=list.filter(isOpen);
+  const done=list.filter(x=>!isOpen(x));
+  const rows = htmlTable(
+    list,
+    ["Datum","Pand","Afwezig","Reden","Invaller"],
+    x=>[fmtDate(x.datum), esc(x.project), esc(x.afwezig), esc(x.reden), esc(x.invaller)||"—"]
+  );
+  const projectCounts=countBy(done,x=>x.project).slice(0,12);
+  const invallerCounts=countBy(done,x=>x.invaller).slice(0,12);
+  const compactProject=projectCounts.map(x=>`${esc(x[0])}: ${x[1]}`).join(" · ") || "Geen";
+  const compactInvaller=invallerCounts.map(x=>`${esc(x[0])}: ${x[1]}`).join(" · ") || "Geen";
+  const openHtml=open.length ? `<h2>Openstaand</h2>${htmlTable(open,["Datum","Pand","Afwezig"],x=>[fmtDate(x.datum),esc(x.project),esc(x.afwezig)])}` : "";
+  activateReport(`
+    <h1>Urenoverzicht invallers - Week ${info.week}</h1>
+    <div class="reportMeta">${fmtDate(range.start.toISOString().slice(0,10))} t/m ${fmtDate(range.end.toISOString().slice(0,10))}</div>
+    <div class="compactStats">
+      <span>${list.length} registraties</span>
+      <span>${done.length} geregeld</span>
+      <span>${open.length} openstaand</span>
+    </div>
+    <h2>Vervangingen deze week</h2>
+    ${rows}
+    <h2>Korte samenvatting per pand</h2>
+    <p style="font-size:11px;line-height:1.4">${compactProject}</p>
+    <h2>Korte samenvatting per invaller</h2>
+    <p style="font-size:11px;line-height:1.4">${compactInvaller}</p>
+    ${openHtml}
+  `);
+}
+function printAbsenceAnalysis(){
+  const base=new Date();
+  const range=weekRangeFromDate(base);
+  const info=isoWeekInfo(base);
+  const list=entries().filter(x=>{
+    if(!x.datum) return false;
+    const d=parseLocalDate(x.datum);
+    return d>=range.start && d<=range.end;
+  });
+  const byRegion=countBy(list,x=>inferRegion(x.project));
+  const byReason=countBy(list,x=>x.reden);
+  const byProject=countBy(list,x=>x.project).slice(0,15);
+  const byObject=countBy(list,x=>x.objectleidster);
+  const open=list.filter(isOpen);
+  activateReport(`
+    <h1>Analyse uitval / vervanging - Week ${info.week}</h1>
+    <div class="reportMeta">${fmtDate(range.start.toISOString().slice(0,10))} t/m ${fmtDate(range.end.toISOString().slice(0,10))}</div>
+    <div class="compactStats">
+      <span>${list.length} totaal</span>
+      <span>${open.length} openstaand</span>
+      <span>${byRegion.length} regio's</span>
+      <span>${byProject.length} panden</span>
+    </div>
+    <h2>Uitval per regio/plaats</h2>
+    ${htmlTable(byRegion,["Regio / plaats","Aantal"],x=>[esc(x[0]),String(x[1])])}
+    <h2>Uitval per reden</h2>
+    ${htmlTable(byReason,["Reden","Aantal"],x=>[esc(x[0]),String(x[1])])}
+    <h2>Top panden met vervanging</h2>
+    ${htmlTable(byProject,["Pand","Aantal"],x=>[esc(x[0]),String(x[1])])}
+    <h2>Per objectleidster</h2>
+    ${htmlTable(byObject,["Objectleidster","Aantal"],x=>[esc(x[0]),String(x[1])])}
+    <h2>Openstaande vervangingen</h2>
+    ${htmlTable(open,["Datum","Pand","Afwezig","Reden"],x=>[fmtDate(x.datum),esc(x.project),esc(x.afwezig),esc(x.reden)])}
+  `);
+}
+
+function exportCsv(){
+  const list = entries(); if(!list.length){ alert("Geen gegevens om te exporteren."); return; }
+  const rows = [["Datum","Project","Objectleidster","Afwezige medewerker","Invaller","Reden","Status","Opmerking"], ...list.map(x=>[x.datum,x.project,x.objectleidster,x.afwezig,x.invaller,x.reden,isOpen(x)?"Open - invaller regelen":"Geregeld",x.opmerking])];
+  const csv = rows.map(r=>r.map(v=>`"${String(v||"").replace(/"/g,'""')}"`).join(";")).join("\n");
+  const blob = new Blob(["﻿"+csv], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="invallerslogboek_v2.csv"; a.click(); URL.revokeObjectURL(url);
+}
+render();
+</script>
+</body>
+</html>
