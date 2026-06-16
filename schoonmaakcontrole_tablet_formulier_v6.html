@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schoonmaakcontrole formulier v6</title>
+<style>
+:root{
+  --green:#91b600;--dark:#1f2937;--line:#d9dee7;--bg:#f4f6f8;
+  --goed:#22c55e;--vuil:#ef4444;--methode:#f59e0b;--periodiek:#2563eb;
+}
+body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:var(--dark)}
+header{background:var(--green);color:white;padding:18px 16px;font-size:22px;font-weight:900}
+main{max-width:980px;margin:auto;padding:14px}
+.card{background:white;border-radius:16px;padding:12px;margin:8px 0;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{font-size:14px;font-weight:900;margin-bottom:5px;display:block}
+input,select,textarea{width:100%;box-sizing:border-box;font-size:18px;padding:12px;border:1px solid var(--line);border-radius:11px;background:white}
+textarea{min-height:76px}
+button{font-size:18px;padding:13px 16px;border:0;border-radius:12px;font-weight:900;cursor:pointer}
+.primary{background:var(--green);color:white}.secondary{background:#e5e7eb;color:#111827}.danger{background:#fee2e2;color:#991b1b}
+.smallBtn{font-size:15px;padding:9px 11px}
+.roomHead{display:flex;gap:10px;align-items:center;justify-content:space-between}
+.roomTitle{font-size:22px;font-weight:900}
+.point{border-top:1px solid var(--line);padding:8px 0}
+.point:first-child{border-top:0}
+.pointTop{display:grid;grid-template-columns:1.3fr .7fr;gap:10px;align-items:end}
+.opts{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:10px}
+.opts input{display:none}
+.opts label{font-size:15px;text-align:center;padding:13px 4px;border-radius:12px;border:2px solid var(--line);font-weight:900;margin:0}
+.opts input:checked + label.goed{background:#dcfce7;border-color:var(--goed)}
+.opts input:checked + label.vuil{background:#fee2e2;border-color:var(--vuil)}
+.opts input:checked + label.methode{background:#fef3c7;border-color:var(--methode)}
+.opts input:checked + label.periodiek{background:#dbeafe;border-color:var(--periodiek)}
+.issueNote{display:none;margin-top:10px}
+.summary{font-size:20px;font-weight:900;line-height:1.5}
+.scoreBig{font-size:34px;color:var(--green);font-weight:900}
+canvas{width:100%;height:110px;border:2px dashed var(--line);border-radius:12px;background:white;touch-action:none}
+.small{font-size:13px;color:#6b7280;line-height:1.35}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.badge{display:inline-block;background:#eef3d8;padding:6px 10px;border-radius:999px;font-weight:900;margin-top:8px}
+@media(max-width:700px){.grid,.pointTop{grid-template-columns:1fr}button{width:100%}.opts{grid-template-columns:1fr 1fr}.roomHead{align-items:flex-start}.opts label{font-size:16px}}
+@media print{ .printSummary{display:block!important} header img{height:40px} 
+ body{background:white}.noPrint{display:none!important}.card{box-shadow:none;border:1px solid #ddd;break-inside:avoid}header{color:#111;background:white;border-bottom:4px solid var(--green)}
+ input,select,textarea{border:0;padding:4px;font-size:14px}.opts label{padding:5px;font-size:12px}.roomTitle{font-size:16px}.point{padding:7px 0}
+ .issueNote{display:block!important}
+}
+</style>
+</head>
+<body>
+<header>Schoonmaakcontrole</header>
+<main>
+<section class="card">
+  <div class="grid">
+    <div><label>Object / klant</label><input id="object" placeholder="Bijv. Gemeentehuis"></div>
+    <div><label>Projectnummer <span style="font-weight:400;color:#6b7280">(optioneel)</span></label><input id="projectnr" placeholder="Bijv. projectnr. of locatiecode"></div>
+    <div><label>Datum</label><input id="datum" type="date"></div>
+    <div><label>Controleur</label><input id="controleur" placeholder="Naam controleur"></div>
+    <div><label>Medewerker</label><input id="medewerker" placeholder="Naam medewerker"></div>
+    <div><label>Contactpersoon opdrachtgever</label><input id="contact" placeholder="Naam contactpersoon"></div>
+  </div>
+</section>
+
+<section class="card noPrint">
+  <button class="primary" onclick="addRoom()">➕ Nieuwe ruimte toevoegen</button>
+  <button class="secondary" onclick="save()">Opslaan op tablet</button>
+  <button class="secondary" onclick="loadSaved()">Laatst opgeslagen laden</button>
+</section>
+
+<section class="card printSummary" style="display:none"><h3>Controleoverzicht</h3><div id="printSummaryContent"></div></section><div id="rooms"></div><section class="card noPrint"><button class="primary" onclick="addRoom()">➕ Nieuwe ruimte toevoegen</button></section>
+
+<section class="card">
+  <div class="summary">
+    Kwaliteitsscore: <span class="scoreBig" id="percent">0%</span><br>
+    <span id="score">0 controlepunten</span>
+  </div>
+  <p class="small">Goed staat standaard aan. Je hoeft tijdens de controle dus alleen afwijkingen aan te tikken.</p>
+  <label>Algemene opmerkingen</label>
+  <textarea id="generalNotes" placeholder="Typ hier algemene opmerkingen..."></textarea>
+</section>
+
+<section class="card">
+  <label>Handtekening opdrachtgever</label>
+  <canvas id="sig" width="900" height="220"></canvas>
+  <div class="actions noPrint">
+    <button class="secondary" onclick="clearSig()">Handtekening wissen</button>
+  </div>
+</section>
+
+<section class="card noPrint">
+  <div class="actions">
+    <button class="primary" onclick="window.print()">PDF maken / printen</button>
+    <button class="danger" onclick="resetForm()">Nieuw formulier</button>
+  </div>
+  <p class="small">Sla de PDF op in Downloads, OneDrive of Google Drive. Geen betaald abonnement nodig.</p>
+</section>
+</main>
+
+<script>
+const pointOptions = [
+  "Bureaus / tafels","Tafels","Stoelen","Vensterbanken","Kasten / lage randen","Deuren / deurkrukken",
+  "Lichtschakelaars","Glaswerk / spiegels","Glaswerk","Prullenbakken","Afvalbakken","Vloer randen / hoeken","Vloer algemeen",
+  "Trap / leuning","Leuningen","Sanitair toiletpot","Sanitair wastafel","Sanitair kranen","Sanitair papier / zeep",
+  "Keuken aanrecht","Keuken spoelbak","Keuken apparatuur buitenzijde","Entree mat","Banken","Kledinghaken",
+  "Afvoerputten","Douchewanden","Douchekranen","Kalkvorming","Buffetomgeving","Sportvloer","Tribunes","Stofvorming","Hoeken / randen","Overig"
+];
+
+const presets = {
+  "Kantoor": ["Bureaus / tafels","Stoelen","Vensterbanken","Prullenbakken"],
+  "Entree": ["Entree mat","Glaswerk / spiegels","Vloer algemeen","Prullenbakken"],
+  "Toilet / sanitair": ["Sanitair toiletpot","Sanitair wastafel","Sanitair kranen","Sanitair papier / zeep","Vloer algemeen"],
+  "Keuken / pantry": ["Keuken aanrecht","Keuken spoelbak","Keuken apparatuur buitenzijde","Prullenbakken","Vloer algemeen"],
+  "Vergaderruimte": ["Bureaus / tafels","Stoelen","Glaswerk / spiegels","Prullenbakken"],
+  "Gang / trap": ["Vloer algemeen","Vloer randen / hoeken","Trap / leuning","Deuren / deurkrukken"],
+  "Zwembad": ["Vloer algemeen","Vloer randen / hoeken","Glaswerk / spiegels","Deuren / deurkrukken","Prullenbakken"],
+  "Kleedruimte": ["Banken","Kledinghaken","Vloer algemeen","Vloer randen / hoeken","Deuren / deurkrukken","Prullenbakken"],
+  "Doucheruimte": ["Vloer algemeen","Afvoerputten","Douchewanden","Douchekranen","Kalkvorming","Glaswerk / spiegels"],
+  "Passagiersruimte schip": ["Tafels","Stoelen","Glaswerk / spiegels","Deuren / deurkrukken","Prullenbakken","Vloer algemeen","Vloer randen / hoeken"],
+  "Restaurant / buffet": ["Tafels","Stoelen","Vloer algemeen","Glaswerk","Prullenbakken","Buffetomgeving"],
+  "Sporthal": ["Sportvloer","Tribunes","Glaswerk","Prullenbakken","Deuren / deurkrukken"],
+  "Eigen ruimte": ["Overig","","",""]
+};
+
+let roomCount=0;
+datum.valueAsDate = new Date();
+
+function esc(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+
+function addRoom(data={}){
+  roomCount++;
+  const id="r"+roomCount, type=data.type||"Kantoor";
+  const div=document.createElement("section");
+  div.className="card room"; div.dataset.id=id;
+  div.innerHTML=`
+    <div class="roomHead">
+      <div><div class="roomTitle">Ruimte ${roomCount}</div><span class="badge">Goed staat standaard aan</span></div>
+      <button class="danger noPrint smallBtn" onclick="this.closest('.room').remove();calcScore()">Verwijder ruimte</button>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <div><label>Ruimtenaam / nummer</label><input class="rname" value="${esc(data.name)}" placeholder="Bijv. Entree, Toilet 1, Kantoor 2"></div>
+      <div><label>Type ruimte</label><select class="rtype" onchange="applyPreset(this.closest('.room'))">
+        ${Object.keys(presets).map(t=>`<option ${t===type?'selected':''}>${t}</option>`).join("")}
+      </select></div>
+    </div>
+    <div class="points"></div>
+    <div class="actions noPrint"><button class="secondary smallBtn" onclick="addPoint(this.closest('.room'))">+ Extra punt toevoegen</button></div>
+    <label>Opmerkingen ruimte</label>
+    <textarea class="rnotes" >${esc(data.notes)}</textarea>`;
+  rooms.appendChild(div);
+  const points=data.points || (presets[type]||presets["Overig"]).map(name=>({name, result:"Goed", note:""}));
+  points.forEach(p=>addPoint(div,p));
+  calcScore();
+}
+
+function pointSelectHtml(value){
+  return `<select class="pname"><option value="">Kies controlepunt...</option>${pointOptions.map(o=>`<option ${o===value?'selected':''}>${o}</option>`).join("")}</select>`;
+}
+
+function addPoint(room, data={}){
+  const rid=room.dataset.id;
+  const name=`${rid}_p${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  const result=data.result || data.issue || "Goed";
+  const div=document.createElement("div");
+  div.className="point";
+  div.innerHTML=`
+    <div class="pointTop">
+      <div><label>Controlepunt</label>${pointSelectHtml(data.name||"")}</div>
+      <div class="noPrint"><button class="danger smallBtn" onclick="this.closest('.point').remove();calcScore()">Verwijder punt</button></div>
+    </div>
+    <div class="opts">
+      <input type="radio" name="${name}" value="Goed" id="${name}g" ${result==="Goed"?'checked':''} onchange="toggleNote(this);calcScore()"><label class="goed" for="${name}g">Goed</label>
+      <input type="radio" name="${name}" value="Vuil" id="${name}v" ${result==="Vuil"?'checked':''} onchange="toggleNote(this);calcScore()"><label class="vuil" for="${name}v">Vuil</label>
+      <input type="radio" name="${name}" value="Methode" id="${name}m" ${result==="Methode"?'checked':''} onchange="toggleNote(this);calcScore()"><label class="methode" for="${name}m">Methode</label>
+      <input type="radio" name="${name}" value="Periodiek" id="${name}p" ${result==="Periodiek"?'checked':''} onchange="toggleNote(this);calcScore()"><label class="periodiek" for="${name}p">Periodiek</label>
+    </div>
+    <div class="issueNote">
+      <label>Opmerking bij afwijking</label>
+      <textarea class="pnote" placeholder="Bijv. kalkaanslag, hoek niet meegenomen, periodieke beurt nodig...">${esc(data.note)}</textarea>
+    </div>`;
+  room.querySelector(".points").appendChild(div);
+  refreshPointNote(div);
+}
+
+function refreshPointNote(point){
+  const checked=point.querySelector("input:checked");
+  const note=point.querySelector(".issueNote");
+  note.style.display = checked && checked.value!=="Goed" ? "block" : "none";
+}
+function toggleNote(input){refreshPointNote(input.closest(".point"));}
+
+function applyPreset(room){
+  if(!confirm("Standaard controlepunten voor dit type ruimte laden? Bestaande punten in deze ruimte worden vervangen.")) return;
+  const type=room.querySelector(".rtype").value;
+  room.querySelector(".points").innerHTML="";
+  presets[type].forEach(name=>addPoint(room,{name,result:"Goed"}));
+  calcScore();
+}
+
+function calcScore(){
+  let goed=0,vuil=0,methode=0,periodiek=0,total=0;
+  document.querySelectorAll(".point").forEach(p=>{
+    const name=p.querySelector(".pname").value;
+    if(!name) return;
+    const checked=p.querySelector("input:checked");
+    if(!checked) return;
+    total++;
+    if(checked.value==="Goed") goed++;
+    if(checked.value==="Vuil") vuil++;
+    if(checked.value==="Methode") methode++;
+    if(checked.value==="Periodiek") periodiek++;
+  });
+  const pct=total?Math.round((goed/total)*100):0;
+  percent.textContent=pct+"%";
+  score.textContent=`${total} controlepunten · Goed: ${goed} · Vuil: ${vuil} · Methode: ${methode} · Periodiek: ${periodiek}`;
+}
+
+function updatePrintSummary(){const pct=document.getElementById("percent").textContent;const el=document.getElementById("printSummaryContent");if(el){el.innerHTML=`<b>Object:</b> ${esc(object.value)}<br><b>Projectnummer:</b> ${esc(projectnr.value)}<br><b>Datum:</b> ${esc(datum.value)}<br><b>Medewerker:</b> ${esc(medewerker.value)}<br><b>Controleur:</b> ${esc(controleur.value)}<br><b>Contactpersoon:</b> ${esc(contact.value)}<br><b>Score:</b> ${pct}`;}} window.addEventListener("beforeprint",updatePrintSummary);
+function collect(){
+  const allRooms=[...document.querySelectorAll(".room")].map(r=>{
+    const points=[...r.querySelectorAll(".point")].map(p=>{
+      const checked=p.querySelector("input:checked");
+      return {name:p.querySelector(".pname").value, result:checked?checked.value:"Goed", note:p.querySelector(".pnote").value};
+    });
+    return {name:r.querySelector(".rname").value,type:r.querySelector(".rtype").value,notes:r.querySelector(".rnotes").value,points};
+  });
+  return {object:object.value,projectnr:projectnr.value,datum:datum.value,controleur:controleur.value,medewerker:medewerker.value,contact:contact.value,generalNotes:generalNotes.value,rooms:allRooms};
+}
+
+function save(){localStorage.setItem("schoonmaakcontrole_v6",JSON.stringify(collect()));alert("Opgeslagen op deze tablet/laptop.");}
+function loadSaved(){
+  const data=JSON.parse(localStorage.getItem("schoonmaakcontrole_v6")||localStorage.getItem("schoonmaakcontrole_v4")||localStorage.getItem("schoonmaakcontrole_v3")||"{}");
+  if(!data.rooms){alert("Geen opgeslagen formulier gevonden.");return}
+  object.value=data.object||""; projectnr.value=data.projectnr||""; datum.value=data.datum||""; controleur.value=data.controleur||""; medewerker.value=data.medewerker||""; contact.value=data.contact||""; generalNotes.value=data.generalNotes||"";
+  rooms.innerHTML=""; roomCount=0; data.rooms.forEach(addRoom); calcScore();
+}
+function resetForm(){if(confirm("Alles wissen en nieuw formulier starten?")){localStorage.removeItem("schoonmaakcontrole_v6");localStorage.removeItem("schoonmaakcontrole_v4");localStorage.removeItem("schoonmaakcontrole_v3");location.reload();}}
+
+const canvas=document.getElementById("sig"), ctx=canvas.getContext("2d"); let drawing=false;
+function pos(e){const r=canvas.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:(t.clientX-r.left)*canvas.width/r.width,y:(t.clientY-r.top)*canvas.height/r.height};}
+function start(e){drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault();}
+function move(e){if(!drawing)return;const p=pos(e);ctx.lineWidth=3;ctx.lineCap="round";ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault();}
+function end(){drawing=false;}
+canvas.addEventListener("mousedown",start);canvas.addEventListener("mousemove",move);window.addEventListener("mouseup",end);
+canvas.addEventListener("touchstart",start,{passive:false});canvas.addEventListener("touchmove",move,{passive:false});canvas.addEventListener("touchend",end);
+function clearSig(){ctx.clearRect(0,0,canvas.width,canvas.height);}
+
+addRoom({type:"Entree"});
+addRoom({type:"Kantoor"});
+addRoom({type:"Toilet / sanitair"});
+</script>
+</body>
+</html>
