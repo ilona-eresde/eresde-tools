@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bestellijst v2 rapporten + Drive</title>
+<style>
+:root{--green:#91b600;--dark:#1f2937;--line:#d9dee7;--bg:#f4f6f8;--soft:#eef3d8;--danger:#fee2e2;--dangerText:#991b1b;--ok:#dcfce7;--okText:#166534;--warn:#fff7ed;--warnText:#9a3412;--blue:#dbeafe;--blueText:#1e40af}
+body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:var(--dark)}
+header{background:var(--green);color:white;padding:18px 16px;font-size:23px;font-weight:900}
+main{max-width:980px;margin:auto;padding:14px}
+.card{background:white;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.filters{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+label{font-size:14px;font-weight:900;margin-bottom:5px;display:block}
+input,select,textarea{width:100%;box-sizing:border-box;font-size:18px;padding:12px;border:1px solid var(--line);border-radius:11px;background:white}
+textarea{min-height:70px}
+button{font-size:18px;padding:13px 16px;border:0;border-radius:12px;font-weight:900;cursor:pointer}
+.primary{background:var(--green);color:white}.secondary{background:#e5e7eb;color:#111827}.danger{background:var(--danger);color:var(--dangerText)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.small{font-size:13px;color:#6b7280;line-height:1.35}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
+.kpi{background:var(--soft);border-radius:13px;padding:11px;font-weight:900;text-align:center}.kpi.today{background:var(--danger);color:var(--dangerText)}.kpi.week{background:var(--warn);color:var(--warnText)}.kpi .num{font-size:28px;color:var(--green)}.kpi.today .num{color:var(--dangerText)}.kpi.week .num{color:var(--warnText)}
+table{width:100%;border-collapse:collapse;margin-top:12px;background:white}th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;font-size:14px;vertical-align:top}th{background:#f9fafb;font-weight:900}
+.badge,.statusOpen,.statusDone,.urgToday,.urgWeek,.urgNormal{display:inline-block;padding:5px 9px;border-radius:999px;font-weight:900;font-size:13px}
+.badge{background:#eef3d8}.statusOpen,.urgToday{background:var(--danger);color:var(--dangerText)}.statusDone{background:var(--ok);color:var(--okText)}.urgWeek{background:var(--warn);color:var(--warnText)}.urgNormal{background:var(--blue);color:var(--blueText)}
+.empty{padding:20px;text-align:center;color:#6b7280;font-weight:700}.rowActions button{font-size:13px;padding:7px 9px;margin:2px}
+.openList{display:grid;gap:8px;margin-top:10px}.openItem{border-radius:13px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}.openItem.today{background:var(--danger);color:var(--dangerText)}.openItem.week{background:var(--warn);color:var(--warnText)}.openItem.normal{background:var(--blue);color:var(--blueText)}.openItem strong{display:block}
+.editBanner{display:none;background:var(--warn);color:var(--warnText);font-weight:900;border-radius:12px;padding:10px;margin-bottom:12px}.ownProduct{display:none;margin-top:10px}
+@media(max-width:760px){.grid,.filters,.summary{grid-template-columns:1fr}button{width:100%}table,thead,tbody,tr,td,th{display:block}thead{display:none}tr{border:1px solid var(--line);border-radius:12px;margin:10px 0;padding:8px;background:white}td{border:0;padding:6px 4px}td:before{content:attr(data-label);display:block;font-weight:900;font-size:12px;color:#6b7280}.rowActions button{width:auto}.openItem{grid-template-columns:1fr}}
+@media print{body{background:white}.noPrint{display:none!important}.card{box-shadow:none;border:1px solid #ddd;break-inside:avoid;margin:8px 0;padding:10px}header{color:#111;background:white;border-bottom:4px solid var(--green);padding:10px 0}main{padding:0;max-width:none}th,td{font-size:11px;padding:5px}.summary{grid-template-columns:repeat(4,1fr)}.kpi{padding:6px}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+<header>Bestellijst <span style="font-size:14px;font-weight:700;opacity:.9">v2 rapporten + Drive</span></header>
+<main>
+<section class="card noPrint"><h2 style="margin:0 0 8px 0">🔴 Nog te bestellen</h2><div id="todoWrap"></div></section>
+<section class="card noPrint">
+  <div id="editBanner" class="editBanner">Je bewerkt nu een bestaande bestelling.</div>
+  <div class="grid">
+    <div><label>Datum</label><input id="datum" type="date"></div>
+    <div><label>Project / locatie</label><input id="project" list="projecten" placeholder="Typ project of locatie..."><datalist id="projecten"></datalist></div>
+    <div><label>Categorie</label><select id="categorie"><option>Middelen van de zaak</option><option>Materialen / Verbruik LSG</option></select></div>
+    <div><label>Product</label><select id="product"></select><div id="ownProductWrap" class="ownProduct"><label style="margin-top:10px">Eigen product</label><input id="eigenProduct" placeholder="Typ productnaam..."></div></div>
+    <div><label>Aantal</label><input id="aantal" placeholder="Bijv. 2 dozen, 4 pakken, 1 stuk"></div>
+    <div><label>Aangevraagd door</label><input id="aangevraagdDoor" placeholder="Naam"></div>
+    <div><label>Urgentie</label><select id="urgentie"><option>Vandaag</option><option selected>Deze week</option><option>Normaal</option></select></div>
+    <div><label>Status</label><select id="status"><option selected>Bestellen</option><option>Besteld</option></select></div>
+  </div>
+  <label style="margin-top:12px">Opmerking</label><textarea id="opmerking" placeholder="Optioneel..."></textarea>
+  <div class="actions"><button class="primary" id="saveBtn">Opslaan</button><button class="secondary" id="clearBtn">Velden leegmaken</button></div>
+  <p class="small">Alles wordt lokaal op dit apparaat opgeslagen. Aantal is een vrij veld, bijvoorbeeld: 2 dozen of 4 pakken.</p>
+</section>
+<section class="card">
+  <h2 style="margin:0 0 8px 0">Overzicht</h2>
+  <div class="summary">
+    <div class="kpi today"><div class="num" id="kpiVandaagBestellen">0</div>vandaag bestellen</div>
+    <div class="kpi week"><div class="num" id="kpiWeekBestellen">0</div>deze week</div>
+    <div class="kpi"><div class="num" id="kpiBesteld">0</div>besteld</div>
+    <div class="kpi"><div class="num" id="kpiTotaal">0</div>totaal</div>
+  </div>
+  <div class="filters noPrint" style="margin-top:14px">
+    <div><label>Periode</label><select id="periode"><option value="week">Deze week</option><option value="today">Vandaag</option><option value="month">Deze maand</option><option value="all">Alles</option></select></div>
+    <div><label>Status</label><select id="filterStatus"><option value="">Alles</option><option value="open">Bestellen</option><option value="done">Besteld</option></select></div>
+    <div><label>Categorie</label><select id="filterCategorie"><option value="">Alles</option><option>Middelen van de zaak</option><option>Materialen / Verbruik LSG</option></select></div>
+    <div><label>Zoeken</label><input id="zoek" placeholder="Project, product of aanvrager"></div>
+  </div>
+  <div class="actions noPrint"><button class="secondary" id="exportBtn">Export naar Excel/CSV</button><button class="secondary" onclick="window.print()">Print / PDF</button><button class="primary" onclick="downloadReportPdf('day')">Dagrapport PDF</button><button class="primary" onclick="downloadReportPdf('week')">Weekrapport PDF</button><button class="primary" onclick="uploadReportToDrive('day')">Dagrapport naar Drive</button><button class="primary" onclick="uploadReportToDrive('week')">Weekrapport naar Drive</button><button class="danger" id="deleteAllBtn">Alles wissen</button></div>
+  <div id="tableWrap"></div>
+</section>
+</main>
+<script>
+const PROJECTS = ["Van der Sluis en Zee - Leeuwarden", "VVE Pier Panderstate - Leeuwarden", "Profile leeuwarden - Leeuwarden", "TZF Emma - Leeuwarden", "TZF COOPMAN - Leeuwarden", "TZF SKROKDAM - Leeuwarden", "TZF ZEVEN - Leeuwarden", "Crossover - Leeuwarden", "Windkracht - Leeuwarden", "Friso bouw - Leeuwarden", "GGD SKROK - Leeuwarden", "Glashandel Martin de boer - Leeuwarden", "Eisma - Leeuwarden", "Thuiszorg akkrum - Akkrum", "De Vos Makelaar - Leeuwarden", "Exalto - Grou", "Rederij Doeksen - Harlingen", "Oosterhof holman - Harlingen", "Orthopraktijk Harlingen - Harlingen", "Piet brouwer - Harlingen", "Finco Energie - Harlingen", "De boer en de groot - Harlingen", "Adonin - Harlingen", "Jongema Logestiek - Harlingen", "Arnold Buringa - Harlingen", "Wesselius - Harlingen", "Cranbarry - Harlingen", "huisartsen havenplein - Harlingen", "Mvgm - Harlingen", "van Swaay - Harlingen", "Damen - Harlingen", "Swan - Harlingen", "Zeezeilers - Harlingen", "Eresde - Harlingen", "BentaCera - Dokkum", "Wetterstins - Bergum", "Omrin Stiens - Stiens", "VVE Walling - Stiens", "Omrin Damwoude - Damwoude", "TZF DAMWOUDE - Damwoude", "De Klinze - Aldtjerk", "Moaiseldsum - Aldtjerk", "Internoord - Leeuwarden", "IPM - Deinum", "Garage Emmakade - Leeuwarden", "DL Plastic - Sint anna", "Thuiszorg - Franeker", "De hertog - Franeker", "Huatamki - Franeker", "Omrin - Franeker", "Offinga - Franeker", "Thuiszorg - Tzummarum", "Roald Morien - Wieuwert", "Annema - Arum", "Connexa - Franeker", "KNKB Voorstraat - Franeker", "KNKB De Trije - Franeker"];
+const PRODUCTS = {
+  "Middelen van de zaak": ["Sanitairreiniger", "Ontkalker", "Interieurreiniger", "Vloerreiniger", "Anders / zelf invullen"],
+  "Materialen / Verbruik LSG": ["Blauwe zakken 70x110", "Blauwe zakken 90x110", "Transparant klein", "Zwart klein", "Zwart normaal 63x80", "Sponzen", "Doekjes rood", "Doekjes blauw", "Velcro mop", "Interieurmop", "Handdoekpapier Z-vouw", "Handdoekpapier los", "Toiletpapier", "Doprol toiletpapier", "Parketborstel", "Anders / zelf invullen"]
+};
+const KEY = "bestellijst_v1";
+let editingId = null;
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s||"").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+function entries(){ try { return JSON.parse(localStorage.getItem(KEY)||"[]"); } catch(e) { return []; } }
+function setEntries(list){ localStorage.setItem(KEY, JSON.stringify(list)); }
+function isOpen(x){ return x.status !== "Besteld"; }
+function chosenProduct(){ return $("product").value === "Anders / zelf invullen" ? $("eigenProduct").value.trim() : $("product").value; }
+function fillProducts(){
+  const sel = $("product"); const old = sel.value; sel.innerHTML = "";
+  (PRODUCTS[$("categorie").value] || []).forEach(p => { const opt = document.createElement("option"); opt.value=p; opt.textContent=p; sel.appendChild(opt); });
+  if ([...sel.options].some(o=>o.value===old)) sel.value = old;
+  toggleOwnProduct();
+}
+function toggleOwnProduct(){ $("ownProductWrap").style.display = $("product").value === "Anders / zelf invullen" ? "block" : "none"; }
+function statusHtml(x){ return isOpen(x) ? '<span class="statusOpen">🔴 Bestellen</span>' : '<span class="statusDone">🟢 Besteld</span>'; }
+function urgHtml(u){ if(u==="Vandaag") return '<span class="urgToday">🔴 Vandaag</span>'; if(u==="Deze week") return '<span class="urgWeek">🟡 Deze week</span>'; return '<span class="urgNormal">Normaal</span>'; }
+function saveEntry(){
+  if(!$('datum').value || !$('project').value.trim() || !chosenProduct() || !$('aantal').value.trim()){ alert('Vul minimaal datum, project, product en aantal in.'); return; }
+  const item = { id: editingId || Date.now().toString(36)+Math.random().toString(16).slice(2), datum:$('datum').value, project:$('project').value.trim(), categorie:$('categorie').value, product:chosenProduct(), aantal:$('aantal').value.trim(), aangevraagdDoor:$('aangevraagdDoor').value.trim(), urgentie:$('urgentie').value, status:$('status').value, opmerking:$('opmerking').value.trim(), updated:new Date().toISOString() };
+  let list = entries();
+  if(editingId) list = list.map(x => x.id===editingId ? {...x, ...item, created:x.created || item.updated} : x); else list.unshift({...item, created:new Date().toISOString()});
+  setEntries(list); clearForm(false); render(); alert(item.status==='Besteld' ? 'Bestelling opgeslagen als besteld.' : 'Bestelling opgeslagen bij nog te bestellen.');
+}
+function clearForm(resetDate=true){ editingId=null; $('editBanner').style.display='none'; $('saveBtn').textContent='Opslaan'; $('project').value=''; $('categorie').value='Middelen van de zaak'; fillProducts(); $('eigenProduct').value=''; $('aantal').value=''; $('aangevraagdDoor').value=''; $('urgentie').value='Deze week'; $('status').value='Bestellen'; $('opmerking').value=''; if(resetDate) $('datum').valueAsDate=new Date(); }
+function edit(id){ const x=entries().find(e=>e.id===id); if(!x) return; editingId=id; $('datum').value=x.datum||''; $('project').value=x.project||''; $('categorie').value=x.categorie||'Middelen van de zaak'; fillProducts(); if((PRODUCTS[$('categorie').value]||[]).includes(x.product)){ $('product').value=x.product; $('eigenProduct').value=''; } else { $('product').value='Anders / zelf invullen'; $('eigenProduct').value=x.product||''; } toggleOwnProduct(); $('aantal').value=x.aantal||''; $('aangevraagdDoor').value=x.aangevraagdDoor||''; $('urgentie').value=x.urgentie||'Deze week'; $('status').value=x.status||'Bestellen'; $('opmerking').value=x.opmerking||''; $('editBanner').style.display='block'; $('saveBtn').textContent='Wijziging opslaan'; window.scrollTo({top:0,behavior:'smooth'}); }
+function markDone(id){ setEntries(entries().map(x=>x.id===id ? {...x,status:'Besteld',updated:new Date().toISOString()} : x)); render(); }
+function markOpen(id){ setEntries(entries().map(x=>x.id===id ? {...x,status:'Bestellen',updated:new Date().toISOString()} : x)); render(); }
+function del(id){ if(!confirm('Deze bestelling verwijderen?')) return; setEntries(entries().filter(x=>x.id!==id)); render(); }
+function deleteAll(){ if(!confirm('Alle bestellingen wissen op dit apparaat?')) return; setEntries([]); render(); }
+function parseLocalDate(s){ const [y,m,d]=String(s||'').split('-').map(Number); return new Date(y,m-1,d); }
+function fmtDate(s){ if(!s) return ''; return parseLocalDate(s).toLocaleDateString('nl-NL',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+function startOfWeek(d){ const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); return x; }
+function sameDay(a,b){ return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+function inPeriod(item, period){ const now=new Date(); const d=parseLocalDate(item.datum); if(period==='today') return sameDay(d,now); if(period==='week'){ const s=startOfWeek(now), e=new Date(s); e.setDate(s.getDate()+7); return d>=s && d<e; } if(period==='month') return d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); return true; }
+function updateKpis(list){ $('kpiVandaagBestellen').textContent=list.filter(x=>isOpen(x)&&x.urgentie==='Vandaag').length; $('kpiWeekBestellen').textContent=list.filter(x=>isOpen(x)&&x.urgentie==='Deze week').length; $('kpiBesteld').textContent=list.filter(x=>!isOpen(x)).length; $('kpiTotaal').textContent=list.length; }
+function renderTodo(list){ const order={'Vandaag':0,'Deze week':1,'Normaal':2}; const todo=list.filter(isOpen).sort((a,b)=>(order[a.urgentie]??9)-(order[b.urgentie]??9)||(a.datum||'').localeCompare(b.datum||'')); if(!todo.length){ $('todoWrap').innerHTML='<div class="empty">Geen openstaande bestellingen.</div>'; return; } $('todoWrap').innerHTML='<div class="openList">'+todo.map(x=>`<div class="openItem ${x.urgentie==='Vandaag'?'today':x.urgentie==='Deze week'?'week':'normal'}"><div><strong>${esc(x.project)} · ${esc(x.product)}</strong>${esc(x.aantal)} · ${esc(x.categorie)} · ${urgHtml(x.urgentie)}</div><div><button class="primary" onclick="markDone('${x.id}')">Zet op besteld</button></div></div>`).join('')+'</div>'; }
+function render(){ const list=entries(); updateKpis(list); renderTodo(list); const q=($('zoek').value||'').toLowerCase(); let filtered=list.filter(x=>inPeriod(x,$('periode').value)); if($('filterStatus').value==='open') filtered=filtered.filter(isOpen); if($('filterStatus').value==='done') filtered=filtered.filter(x=>!isOpen(x)); if($('filterCategorie').value) filtered=filtered.filter(x=>x.categorie===$('filterCategorie').value); if(q) filtered=filtered.filter(x=>[x.project,x.product,x.aantal,x.aangevraagdDoor,x.urgentie,x.status,x.opmerking,x.categorie].join(' ').toLowerCase().includes(q)); if(!filtered.length){ $('tableWrap').innerHTML='<div class="empty">Geen bestellingen gevonden voor deze selectie.</div>'; return; } $('tableWrap').innerHTML=`<table><thead><tr><th>Datum</th><th>Project</th><th>Categorie</th><th>Product</th><th>Aantal</th><th>Urgentie</th><th>Status</th><th>Aangevraagd door</th><th>Opmerking</th><th class="noPrint">Actie</th></tr></thead><tbody>${filtered.map(x=>`<tr><td data-label="Datum">${fmtDate(x.datum)}</td><td data-label="Project">${esc(x.project)}</td><td data-label="Categorie"><span class="badge">${esc(x.categorie)}</span></td><td data-label="Product"><strong>${esc(x.product)}</strong></td><td data-label="Aantal">${esc(x.aantal)}</td><td data-label="Urgentie">${urgHtml(x.urgentie)}</td><td data-label="Status">${statusHtml(x)}</td><td data-label="Aangevraagd door">${esc(x.aangevraagdDoor)}</td><td data-label="Opmerking">${esc(x.opmerking)}</td><td data-label="Actie" class="rowActions noPrint"><button class="secondary" onclick="edit('${x.id}')">Bewerk</button>${isOpen(x)?`<button class="primary" onclick="markDone('${x.id}')">Besteld</button>`:`<button class="secondary" onclick="markOpen('${x.id}')">Terugzetten</button>`}<button class="danger" onclick="del('${x.id}')">Verwijder</button></td></tr>`).join('')}</tbody></table>`; }
+function exportCsv(){ const list=entries(); if(!list.length){ alert('Geen gegevens om te exporteren.'); return; } const rows=[['Datum','Project','Categorie','Product','Aantal','Aangevraagd door','Urgentie','Status','Opmerking'], ...list.map(x=>[x.datum,x.project,x.categorie,x.product,x.aantal,x.aangevraagdDoor,x.urgentie,x.status,x.opmerking])]; const csv=rows.map(r=>r.map(v=>'"'+String(v||'').replace(/"/g,'""')+'"').join(';')).join('\\n'); const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='bestellijst_v1.csv'; a.click(); URL.revokeObjectURL(url); }
+
+const DRIVE_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwbDsMMno6vmHQq0yzERwbsD62ixyiitY_dWGpMbQQxoB3HZwPcOoB1Yvwiu-7FVd3WTw/exec';
+
+function safeFilePart(s){ return String(s||'').trim().replace(/[^a-z0-9\-_]+/gi,'_').replace(/_+/g,'_').replace(/^_|_$/g,'') || 'Onbekend'; }
+function isoDate(d){ return d.toISOString().slice(0,10); }
+function endOfWeek(d){ const s=startOfWeek(d); const e=new Date(s); e.setDate(s.getDate()+6); return e; }
+function weekNumber(d){
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+function reportItems(type){
+  const now = new Date();
+  if(type === 'day') return entries().filter(x => sameDay(parseLocalDate(x.datum), now));
+  const s = startOfWeek(now), e = new Date(s); e.setDate(s.getDate()+7);
+  return entries().filter(x => { const d=parseLocalDate(x.datum); return d>=s && d<e; });
+}
+function groupCounts(list, key){
+  const m = new Map();
+  list.forEach(x => { const k=x[key] || 'Onbekend'; m.set(k, (m.get(k)||0)+1); });
+  return [...m.entries()].sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0]));
+}
+function createReportPdf(type){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'p', unit:'mm', format:'a4'});
+  const now = new Date();
+  const list = reportItems(type).sort((a,b)=>(a.datum||'').localeCompare(b.datum||'') || (a.project||'').localeCompare(b.project||''));
+  const title = type === 'day' ? 'Dagrapport bestellijst' : 'Weekrapport bestellijst';
+  const subtitle = type === 'day'
+    ? fmtDate(isoDate(now))
+    : `Week ${weekNumber(now)} · ${fmtDate(isoDate(startOfWeek(now)))} t/m ${fmtDate(isoDate(endOfWeek(now)))}`;
+
+  doc.setFillColor(145,182,0);
+  doc.rect(0,0,210,18,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(16);
+  doc.text(title, 12, 12);
+  doc.setTextColor(31,41,55);
+  doc.setFontSize(11);
+  doc.text(subtitle, 12, 26);
+  doc.text(`Totaal bestellingen: ${list.length}`, 12, 33);
+  doc.text(`Open: ${list.filter(isOpen).length} · Besteld: ${list.filter(x=>!isOpen(x)).length}`, 12, 40);
+
+  let y = 48;
+  doc.setFontSize(13);
+  doc.text('Overzicht per product', 12, y);
+  y += 4;
+  doc.autoTable({
+    startY:y,
+    head:[['Product','Aantal regels']],
+    body: groupCounts(list,'product').map(([k,v])=>[k,String(v)]),
+    styles:{fontSize:9},
+    headStyles:{fillColor:[145,182,0]},
+    margin:{left:12,right:12}
+  });
+
+  y = doc.lastAutoTable.finalY + 9;
+  doc.setFontSize(13);
+  doc.text('Overzicht per project / locatie', 12, y);
+  y += 4;
+  doc.autoTable({
+    startY:y,
+    head:[['Project / locatie','Aantal regels']],
+    body: groupCounts(list,'project').map(([k,v])=>[k,String(v)]),
+    styles:{fontSize:9},
+    headStyles:{fillColor:[145,182,0]},
+    margin:{left:12,right:12}
+  });
+
+  y = doc.lastAutoTable.finalY + 9;
+  if(y > 245){ doc.addPage(); y = 16; }
+  doc.setFontSize(13);
+  doc.text('Details', 12, y);
+  y += 4;
+  doc.autoTable({
+    startY:y,
+    head:[['Datum','Project','Product','Aantal','Urgentie','Status','Aanvrager']],
+    body: list.map(x=>[fmtDate(x.datum), x.project||'', x.product||'', x.aantal||'', x.urgentie||'', x.status||'', x.aangevraagdDoor||'']),
+    styles:{fontSize:7, cellPadding:1.8},
+    headStyles:{fillColor:[145,182,0]},
+    columnStyles:{0:{cellWidth:18},1:{cellWidth:40},2:{cellWidth:35},3:{cellWidth:24},4:{cellWidth:20},5:{cellWidth:18},6:{cellWidth:25}},
+    margin:{left:8,right:8}
+  });
+
+  return doc;
+}
+function reportFilename(type){
+  const now = new Date();
+  if(type === 'day') return `Bestellijst_Dagrapport_${isoDate(now)}.pdf`;
+  return `Bestellijst_Weekrapport_Week${weekNumber(now)}_${now.getFullYear()}.pdf`;
+}
+function downloadReportPdf(type){
+  const doc = createReportPdf(type);
+  doc.save(reportFilename(type));
+}
+function uploadReportToDrive(type){
+  if(!DRIVE_WEBAPP_URL || DRIVE_WEBAPP_URL.includes('VUL_HIER')){
+    alert('Drive upload is nog niet gekoppeld. Vul eerst de Apps Script Web-app URL in de code in.');
+    return;
+  }
+  const doc = createReportPdf(type);
+  const blob = doc.output('blob');
+  const reader = new FileReader();
+  reader.onloadend = async function(){
+    try{
+      await fetch(DRIVE_WEBAPP_URL, {
+        method:'POST',
+        mode:'no-cors',
+        body:JSON.stringify({ filename: reportFilename(type), file: reader.result })
+      });
+      alert('Rapport verzonden naar Google Drive. Controleer de map Bestellijst Rapporten.');
+    } catch(err){
+      alert('Upload mislukt: ' + err);
+    }
+  };
+  reader.readAsDataURL(blob);
+}
+
+function init(){ PROJECTS.forEach(p=>{ const opt=document.createElement('option'); opt.value=p; $('projecten').appendChild(opt); }); $('datum').valueAsDate=new Date(); fillProducts(); $('categorie').addEventListener('change',fillProducts); $('product').addEventListener('change',toggleOwnProduct); $('saveBtn').addEventListener('click',saveEntry); $('clearBtn').addEventListener('click',()=>clearForm()); $('exportBtn').addEventListener('click',exportCsv); $('deleteAllBtn').addEventListener('click',deleteAll); ['periode','filterStatus','filterCategorie'].forEach(id=>$(id).addEventListener('change',render)); $('zoek').addEventListener('input',render); render(); }
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
