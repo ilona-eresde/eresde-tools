@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schepen Facturatie v1</title>
+<style>
+:root{--green:#91b600;--dark:#1f2937;--line:#d9dee7;--bg:#f4f6f8;--soft:#eef3d8;--danger:#fee2e2;--dangerText:#991b1b;--ok:#dcfce7;--okText:#166534;--warn:#fff7ed;--warnText:#9a3412;--blue:#dbeafe;--blueText:#1e40af}
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:var(--dark)}
+header{background:var(--green);color:white;padding:18px 16px;font-size:23px;font-weight:900}
+main{max-width:980px;margin:auto;padding:14px}
+.card{background:white;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+label{font-size:14px;font-weight:900;margin-bottom:5px;display:block}
+input,select{width:100%;font-size:18px;padding:12px;border:1px solid var(--line);border-radius:11px;background:white}
+button{font-size:18px;padding:13px 16px;border:0;border-radius:12px;font-weight:900;cursor:pointer}
+.primary{background:var(--green);color:white}.secondary{background:#e5e7eb;color:#111827}.danger{background:var(--danger);color:var(--dangerText)}.warn{background:var(--warn);color:var(--warnText)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.small{font-size:13px;color:#6b7280;line-height:1.35}
+.shipRow{display:grid;grid-template-columns:1fr auto 70px auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:10px;margin:8px 0;background:#fff}
+.shipName{font-size:18px;font-weight:900}
+.count{font-size:24px;text-align:center;font-weight:900;color:var(--green);border:1px solid var(--line);border-radius:10px;padding:8px;background:#fafafa}
+.roundBtn{width:48px;height:48px;border-radius:999px;padding:0;font-size:24px}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px}
+.kpi{background:var(--soft);border-radius:13px;padding:11px;font-weight:900;text-align:center}.kpi .num{font-size:28px;color:var(--green)}
+table{width:100%;border-collapse:collapse;margin-top:12px;background:white}th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;font-size:14px;vertical-align:top}th{background:#f9fafb;font-weight:900}
+.rowActions button{font-size:13px;padding:7px 9px;margin:2px}
+.empty{padding:20px;text-align:center;color:#6b7280;font-weight:700}
+.hidden{display:none!important}
+.badge{display:inline-block;background:#eef3d8;padding:5px 9px;border-radius:999px;font-weight:900;font-size:13px}
+@media(max-width:760px){.grid,.grid3,.summary{grid-template-columns:1fr}button{width:100%}.shipRow{grid-template-columns:1fr auto 70px auto}.roundBtn{width:44px}table,thead,tbody,tr,td,th{display:block}thead{display:none}tr{border:1px solid var(--line);border-radius:12px;margin:10px 0;padding:8px;background:white}td{border:0;padding:6px 4px}td:before{content:attr(data-label);display:block;font-weight:900;font-size:12px;color:#6b7280}.rowActions button{width:auto}}
+@media print{body{background:white}.noPrint{display:none!important}.card{box-shadow:none;border:1px solid #ddd;break-inside:avoid;margin:8px 0;padding:10px}header{color:#111;background:white;border-bottom:4px solid var(--green);padding:10px 0}main{padding:0;max-width:none}th,td{font-size:11px;padding:5px}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+<header>🚢 Schepen Facturatie <span style="font-size:14px;font-weight:700;opacity:.9">v1</span></header>
+<main>
+
+<section class="card noPrint">
+  <h2 style="margin:0 0 8px 0">Week afsluiten</h2>
+  <div class="grid3">
+    <div><label>Jaar</label><input id="year" type="number" min="2020" max="2100"></div>
+    <div><label>Weeknummer</label><input id="week" type="number" min="1" max="53"></div>
+    <div><label>Notitie</label><input id="note" placeholder="Optioneel, bijv. extra boot / wissel"></div>
+  </div>
+  <div id="shipInputs" style="margin-top:12px"></div>
+  <div class="actions">
+    <button class="primary" onclick="saveWeek()">Week opslaan</button>
+    <button class="secondary" onclick="clearForm()">Velden leegmaken</button>
+  </div>
+  <p class="small">Vul per week de werkelijke telling in. Dus niet de planning, maar wat uiteindelijk voor facturatie moet meetellen.</p>
+</section>
+
+<section class="card">
+  <h2 style="margin:0 0 8px 0">Overzicht opgeslagen weken</h2>
+  <div class="summary">
+    <div class="kpi"><div class="num" id="kpiWeeks">0</div>weken</div>
+    <div class="kpi"><div class="num" id="kpiTotal">0</div>totaal schepen</div>
+    <div class="kpi"><div class="num" id="kpiTop">-</div>meest</div>
+  </div>
+  <div id="weeksWrap"></div>
+</section>
+
+<section class="card">
+  <h2 style="margin:0 0 8px 0">Periode / facturatie-overzicht</h2>
+  <div class="grid3 noPrint">
+    <div><label>Van week</label><input id="fromWeek" type="number" min="1" max="53"></div>
+    <div><label>Tot en met week</label><input id="toWeek" type="number" min="1" max="53"></div>
+    <div><label>Jaar</label><input id="periodYear" type="number" min="2020" max="2100"></div>
+  </div>
+  <div class="actions noPrint">
+    <button class="secondary" onclick="renderPeriod()">Toon periode</button>
+    <button class="primary" onclick="exportCsv()">Export Excel/CSV</button>
+    <button class="primary" onclick="downloadPdf()">PDF rapport</button>
+    <button class="primary" onclick="uploadPdfToDrive()">☁️ Periode naar Drive</button>
+    <button class="secondary" onclick="window.print()">Print / PDF</button>
+  </div>
+  <div id="periodWrap"></div>
+</section>
+
+</main>
+<script>
+const KEY = "schepen_facturatie_v1";
+const SHIPS = ["Friesland","Vlieland","Willem Barentsz","Willem de Vlamingh","Tiger","Koegelwieck"];
+function $(id){return document.getElementById(id)}
+function entries(){try{return JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){return[]}}
+function setEntries(list){localStorage.setItem(KEY, JSON.stringify(list))}
+function esc(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function currentWeekInfo(){
+  const now = new Date();
+  const date = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  const week = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  return {year: date.getUTCFullYear(), week};
+}
+function buildShipInputs(){
+  $("shipInputs").innerHTML = SHIPS.map((s,i)=>`
+    <div class="shipRow">
+      <div class="shipName">${esc(s)}</div>
+      <button class="secondary roundBtn" onclick="adjust('${s}',-1)">−</button>
+      <input class="countInput" id="ship_${i}" data-ship="${esc(s)}" type="number" min="0" value="0" oninput="updateLiveTotal()">
+      <button class="primary roundBtn" onclick="adjust('${s}',1)">+</button>
+    </div>
+  `).join("");
+}
+function adjust(ship, delta){
+  const input = [...document.querySelectorAll(".countInput")].find(x=>x.dataset.ship===ship);
+  input.value = Math.max(0, Number(input.value||0)+delta);
+  updateLiveTotal();
+}
+function getCountsFromForm(){
+  const counts = {};
+  document.querySelectorAll(".countInput").forEach(inp=>counts[inp.dataset.ship]=Number(inp.value||0));
+  return counts;
+}
+function setCountsToForm(counts){
+  document.querySelectorAll(".countInput").forEach(inp=>inp.value = Number((counts||{})[inp.dataset.ship]||0));
+  updateLiveTotal();
+}
+function updateLiveTotal(){}
+function clearForm(){
+  const wi=currentWeekInfo();
+  $("year").value = wi.year;
+  $("week").value = wi.week;
+  $("note").value = "";
+  setCountsToForm({});
+}
+function saveWeek(){
+  const year = Number($("year").value);
+  const week = Number($("week").value);
+  if(!year || !week){alert("Vul jaar en weeknummer in."); return;}
+  const counts = getCountsFromForm();
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+  if(total===0 && !confirm("Alle tellingen zijn 0. Toch opslaan?")) return;
+  const item = {id:`${year}-W${week}`, year, week, counts, note:$("note").value.trim(), updated:new Date().toISOString()};
+  let list = entries().filter(x=>!(x.year===year && x.week===week));
+  list.unshift(item);
+  list.sort((a,b)=>b.year-a.year || b.week-a.week);
+  setEntries(list);
+  render();
+  alert(`Week ${week} opgeslagen.`);
+}
+function editWeek(year, week){
+  const x = entries().find(e=>e.year===year && e.week===week);
+  if(!x) return;
+  $("year").value=x.year; $("week").value=x.week; $("note").value=x.note||"";
+  setCountsToForm(x.counts);
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function deleteWeek(year, week){
+  if(!confirm(`Week ${week} verwijderen?`)) return;
+  setEntries(entries().filter(x=>!(x.year===year && x.week===week)));
+  render();
+}
+function totalsFor(list){
+  const totals = {};
+  SHIPS.forEach(s=>totals[s]=0);
+  list.forEach(w=>SHIPS.forEach(s=>totals[s]+=Number((w.counts||{})[s]||0)));
+  return totals;
+}
+function renderWeeks(){
+  const list=entries();
+  if(!list.length){$("weeksWrap").innerHTML='<div class="empty">Nog geen weken opgeslagen.</div>';return;}
+  $("weeksWrap").innerHTML = `<table><thead><tr><th>Jaar</th><th>Week</th><th>Totaal</th><th>Details</th><th>Notitie</th><th class="noPrint">Actie</th></tr></thead><tbody>${
+    list.map(x=>{
+      const total = Object.values(x.counts||{}).reduce((a,b)=>a+Number(b||0),0);
+      const details = SHIPS.map(s=>`${s}: ${Number((x.counts||{})[s]||0)}`).join("<br>");
+      return `<tr><td data-label="Jaar">${x.year}</td><td data-label="Week"><span class="badge">Week ${x.week}</span></td><td data-label="Totaal"><strong>${total}</strong></td><td data-label="Details">${details}</td><td data-label="Notitie">${esc(x.note)}</td><td data-label="Actie" class="rowActions noPrint"><button class="secondary" onclick="editWeek(${x.year},${x.week})">Bewerk</button><button class="danger" onclick="deleteWeek(${x.year},${x.week})">Verwijder</button></td></tr>`;
+    }).join("")
+  }</tbody></table>`;
+}
+function selectedPeriodWeeks(){
+  const year=Number($("periodYear").value);
+  const from=Number($("fromWeek").value);
+  const to=Number($("toWeek").value);
+  return entries().filter(x=>x.year===year && x.week>=from && x.week<=to).sort((a,b)=>a.week-b.week);
+}
+function renderPeriod(){
+  const list = selectedPeriodWeeks();
+  const totals = totalsFor(list);
+  const totalAll = Object.values(totals).reduce((a,b)=>a+b,0);
+  $("periodWrap").innerHTML = `
+    <h3>Periode week ${$("fromWeek").value} t/m ${$("toWeek").value} · ${$("periodYear").value}</h3>
+    <p><strong>${list.length}</strong> week/weken meegenomen · <strong>${totalAll}</strong> totaal</p>
+    <table>
+      <thead><tr><th>Schip</th><th>Aantal</th></tr></thead>
+      <tbody>${SHIPS.map(s=>`<tr><td data-label="Schip">${esc(s)}</td><td data-label="Aantal"><strong>${totals[s]}</strong></td></tr>`).join("")}</tbody>
+    </table>
+    <h3>Per week</h3>
+    <table>
+      <thead><tr><th>Week</th>${SHIPS.map(s=>`<th>${esc(s)}</th>`).join("")}<th>Totaal</th></tr></thead>
+      <tbody>${list.map(w=>{
+        const t = SHIPS.reduce((a,s)=>a+Number((w.counts||{})[s]||0),0);
+        return `<tr><td data-label="Week">Week ${w.week}</td>${SHIPS.map(s=>`<td data-label="${esc(s)}">${Number((w.counts||{})[s]||0)}</td>`).join("")}<td data-label="Totaal"><strong>${t}</strong></td></tr>`;
+      }).join("")}</tbody>
+    </table>`;
+}
+function updateKpis(){
+  const list=entries();
+  $("kpiWeeks").textContent=list.length;
+  const totals=totalsFor(list);
+  const totalAll=Object.values(totals).reduce((a,b)=>a+b,0);
+  $("kpiTotal").textContent=totalAll;
+  const top=Object.entries(totals).sort((a,b)=>b[1]-a[1])[0];
+  $("kpiTop").textContent=top && top[1]>0 ? `${top[0]} (${top[1]})` : "-";
+}
+function exportCsv(){
+  const list=selectedPeriodWeeks();
+  if(!list.length){alert("Geen weken in deze periode."); return;}
+  const totals=totalsFor(list);
+  const rows=[
+    ["Periode",`Week ${$("fromWeek").value} t/m ${$("toWeek").value}`],
+    [],
+    ["Schip","Aantal"],
+    ...SHIPS.map(s=>[s, totals[s]]),
+    [],
+    ["Week",...SHIPS,"Totaal"],
+    ...list.map(w=>["Week "+w.week, ...SHIPS.map(s=>Number((w.counts||{})[s]||0)), SHIPS.reduce((a,s)=>a+Number((w.counts||{})[s]||0),0)])
+  ];
+  const csv=rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(";")).join("\n");
+  const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=`Schepen_Facturatie_week_${$("fromWeek").value}-${$("toWeek").value}_${$("periodYear").value}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function createPdf(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:"p", unit:"mm", format:"a4"});
+  const list=selectedPeriodWeeks();
+  const totals=totalsFor(list);
+  const title=`Schepen facturatie · week ${$("fromWeek").value} t/m ${$("toWeek").value} · ${$("periodYear").value}`;
+  doc.setFillColor(145,182,0);
+  doc.rect(0,0,210,18,"F");
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(15);
+  doc.text(title, 12, 12);
+  doc.setTextColor(31,41,55);
+  doc.setFontSize(11);
+  doc.text(`Aantal weken: ${list.length}`, 12, 28);
+  doc.autoTable({
+    startY:36,
+    head:[["Schip","Aantal"]],
+    body:SHIPS.map(s=>[s, String(totals[s])]),
+    headStyles:{fillColor:[145,182,0]},
+    styles:{fontSize:10},
+    margin:{left:12,right:12}
+  });
+  doc.autoTable({
+    startY:doc.lastAutoTable.finalY + 10,
+    head:[["Week",...SHIPS,"Totaal"]],
+    body:list.map(w=>["Week "+w.week, ...SHIPS.map(s=>String(Number((w.counts||{})[s]||0))), String(SHIPS.reduce((a,s)=>a+Number((w.counts||{})[s]||0),0))]),
+    headStyles:{fillColor:[145,182,0]},
+    styles:{fontSize:7, cellPadding:1.5},
+    margin:{left:6,right:6}
+  });
+  return doc;
+}
+function downloadPdf(){
+  const list=selectedPeriodWeeks();
+  if(!list.length){alert("Geen weken in deze periode."); return;}
+  createPdf().save(`Schepen_Facturatie_week_${$("fromWeek").value}-${$("toWeek").value}_${$("periodYear").value}.pdf`);
+}
+
+const DRIVE_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyfFeL2s8uBVsoSeSGt7zpywCEa00ykdthnMr5SfeaIwLsbnG46vI4vA7YfGKDAGH29kg/exec';
+
+function periodFilename(){
+  return `Schepen_Facturatie_week_${$("fromWeek").value}-${$("toWeek").value}_${$("periodYear").value}.pdf`;
+}
+
+function uploadPdfToDrive(){
+  const list = selectedPeriodWeeks();
+  if(!list.length){alert("Geen weken in deze periode."); return;}
+  const doc = createPdf();
+  const blob = doc.output("blob");
+  const reader = new FileReader();
+  reader.onloadend = async function(){
+    try{
+      await fetch(DRIVE_WEBAPP_URL, {
+        method:"POST",
+        mode:"no-cors",
+        body:JSON.stringify({
+          filename: periodFilename(),
+          file: reader.result
+        })
+      });
+      alert("Rapport verzonden naar Google Drive. Controleer je Drive-map.");
+    }catch(err){
+      alert("Upload mislukt: " + err);
+    }
+  };
+  reader.readAsDataURL(blob);
+}
+
+function render(){
+  updateKpis();
+  renderWeeks();
+  renderPeriod();
+}
+function init(){
+  buildShipInputs();
+  const wi=currentWeekInfo();
+  $("year").value=wi.year; $("week").value=wi.week; $("periodYear").value=wi.year; $("fromWeek").value=Math.max(1,wi.week-3); $("toWeek").value=wi.week;
+  render();
+}
+document.addEventListener("DOMContentLoaded", init);
+</script>
+</body>
+</html>
