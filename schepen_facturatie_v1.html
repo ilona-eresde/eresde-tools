@@ -75,6 +75,7 @@ table{width:100%;border-collapse:collapse;margin-top:12px;background:white}th,td
     <button class="secondary" onclick="renderPeriod()">Toon periode</button>
     <button class="primary" onclick="exportCsv()">Export Excel/CSV</button>
     <button class="primary" onclick="downloadPdf()">PDF rapport</button>
+    <button class="primary" onclick="uploadPdfToDrive()">☁️ Periode naar Drive</button>
     <button class="secondary" onclick="window.print()">Print / PDF</button>
   </div>
   <div id="periodWrap"></div>
@@ -267,6 +268,37 @@ function downloadPdf(){
   if(!list.length){alert("Geen weken in deze periode."); return;}
   createPdf().save(`Schepen_Facturatie_week_${$("fromWeek").value}-${$("toWeek").value}_${$("periodYear").value}.pdf`);
 }
+
+const DRIVE_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyfFeL2s8uBVsoSeSGt7zpywCEa00ykdthnMr5SfeaIwLsbnG46vI4vA7YfGKDAGH29kg/exec';
+
+function periodFilename(){
+  return `Schepen_Facturatie_week_${$("fromWeek").value}-${$("toWeek").value}_${$("periodYear").value}.pdf`;
+}
+
+function uploadPdfToDrive(){
+  const list = selectedPeriodWeeks();
+  if(!list.length){alert("Geen weken in deze periode."); return;}
+  const doc = createPdf();
+  const blob = doc.output("blob");
+  const reader = new FileReader();
+  reader.onloadend = async function(){
+    try{
+      await fetch(DRIVE_WEBAPP_URL, {
+        method:"POST",
+        mode:"no-cors",
+        body:JSON.stringify({
+          filename: periodFilename(),
+          file: reader.result
+        })
+      });
+      alert("Rapport verzonden naar Google Drive. Controleer je Drive-map.");
+    }catch(err){
+      alert("Upload mislukt: " + err);
+    }
+  };
+  reader.readAsDataURL(blob);
+}
+
 function render(){
   updateKpis();
   renderWeeks();
