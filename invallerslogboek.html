@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Invallerslogboek </title>
+<title>Invallerslogboek v2</title>
 <style>
 :root{
   --green:#91b600;--dark:#1f2937;--line:#d9dee7;--bg:#f4f6f8;--soft:#eef3d8;
@@ -38,19 +38,6 @@ th{background:#f9fafb;font-weight:900}
 .openItem{background:var(--danger);color:var(--dangerText);border-radius:13px;padding:12px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
 .openItem strong{display:block;color:#7f1d1d}
 .editBanner{display:none;background:var(--warn);color:var(--warnText);font-weight:900;border-radius:12px;padding:10px;margin-bottom:12px}
-.reportBox{display:none;background:white}
-.reportBox h1{margin:0 0 6px 0;font-size:22px}
-.reportBox h2{margin:14px 0 6px 0;font-size:17px}
-.reportMeta{font-size:12px;color:#6b7280;margin-bottom:8px}
-.compactStats{display:flex;gap:12px;flex-wrap:wrap;margin:8px 0;font-weight:900}
-.compactStats span{background:var(--soft);border-radius:999px;padding:6px 10px}
-.reportBox table{margin-top:6px}
-.reportBox th,.reportBox td{font-size:11px;padding:5px}
-@media print{
-  body.reportMode header,body.reportMode main > section:not(#reportPrintArea){display:none!important}
-  body.reportMode #reportPrintArea{display:block!important;box-shadow:none;border:0;margin:0;padding:0}
-  body.reportMode main{padding:0;max-width:none}
-}
 @media(max-width:760px){
  .grid,.filters,.summary{grid-template-columns:1fr}
  button{width:100%}
@@ -68,14 +55,16 @@ th{background:#f9fafb;font-weight:900}
  main{padding:0;max-width:none} th,td{font-size:11px;padding:5px} .summary{grid-template-columns:repeat(4,1fr)} .kpi{padding:6px}
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
-  <div style="padding:12px 15px;background:#91b600;">
+<div style="padding:12px 15px;background:#91b600;">
   <a href="index.html" style="font-weight:bold;text-decoration:none;color:white;">
     ← Terug naar Dashboard
   </a>
 </div>
-<header>Invallerslogboek </header>
+<header>Invallerslogboek v2</header>
 <main>
 <section class="card noPrint" id="openCard">
   <h2 style="margin:0 0 8px 0">🔴 Openstaande vervangingen</h2>
@@ -117,14 +106,13 @@ th{background:#f9fafb;font-weight:900}
   </div>
   <div class="actions noPrint">
     <button class="secondary" onclick="exportCsv()">Export naar Excel/CSV</button>
-    <button class="secondary" onclick="printCompactWeekReport()">Urenoverzicht week</button>
-    <button class="secondary" onclick="printAbsenceAnalysis()">Analyse uitval</button>
     <button class="secondary" onclick="window.print()">Print / PDF</button>
+    <button class="primary" onclick="downloadWeekReportPdf()">Weekrapport PDF</button>
+    <button class="primary" onclick="uploadWeekReportToDrive()">☁️ Weekrapport naar Drive</button>
     <button class="danger" onclick="deleteAll()">Alles wissen</button>
   </div>
   <div id="tableWrap"></div>
 </section>
-<section class="card reportBox" id="reportPrintArea"></section>
 </main>
 
 <script>
@@ -311,121 +299,149 @@ function render(){
   </table>`;
 }
 
-function isoWeekInfo(date){
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
-  return {year:d.getUTCFullYear(), week:weekNo};
+const DRIVE_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwROr2Brr69VvQiaCx6ziKTIWWQcSxGcpHT-9JtDmYo3rw2raIH3dOxkHk0gCvryjBK/exec';
+
+function isoDate(d){ return d.toISOString().slice(0,10); }
+
+function endOfWeek(d){
+  const s=startOfWeek(d);
+  const e=new Date(s);
+  e.setDate(s.getDate()+6);
+  return e;
 }
-function weekRangeFromDate(date){
-  const s=startOfWeek(date);
-  const e=new Date(s); e.setDate(s.getDate()+6);
-  return {start:s,end:e};
+
+function weekNumber(d){
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
 }
-function countBy(list, keyFn){
-  const m={};
-  list.forEach(x=>{
-    const k=(keyFn(x)||"—").trim() || "—";
-    m[k]=(m[k]||0)+1;
+
+function weekReportItems(){
+  const now = new Date();
+  const s = startOfWeek(now);
+  const e = new Date(s); e.setDate(s.getDate()+7);
+  return entries()
+    .filter(x => { const d=parseLocalDate(x.datum); return d>=s && d<e; })
+    .sort((a,b)=>(a.datum||'').localeCompare(b.datum||'') || (a.project||'').localeCompare(b.project||''));
+}
+
+function countBy(list, key){
+  const m = new Map();
+  list.forEach(x => {
+    const k = x[key] || 'Onbekend';
+    m.set(k, (m.get(k)||0)+1);
   });
-  return Object.entries(m).sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0]));
+  return [...m.entries()].sort((a,b)=>b[1]-a[1] || a[0].localeCompare(b[0]));
 }
-function inferRegion(projectName){
-  const s=String(projectName||"");
-  const parts=s.split(" - ");
-  if(parts.length>1) return parts[parts.length-1].trim();
-  const known=["Leeuwarden","Harlingen","Franeker","Dokkum","Bergum","Stiens","Damwoude","Grou","Akkrum","Aldtjerk","Deinum","Tzummarum","Arum"];
-  const hit=known.find(k=>s.toLowerCase().includes(k.toLowerCase()));
-  return hit||"Onbekend";
-}
-function htmlTable(rows, headers, cells){
-  if(!rows.length) return '<div class="empty">Geen gegevens.</div>';
-  return `<table><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map(x=>`<tr>${cells(x).map(v=>`<td>${v}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
-}
-function activateReport(html){
-  reportPrintArea.innerHTML=html;
-  document.body.classList.add("reportMode");
-  window.print();
-  setTimeout(()=>document.body.classList.remove("reportMode"),500);
-}
-function currentWeekItems(){
-  const base=new Date();
-  const range=weekRangeFromDate(base);
-  const info=isoWeekInfo(base);
-  const list=entries().filter(x=>{
-    if(!x.datum) return false;
-    const d=parseLocalDate(x.datum);
-    return d>=range.start && d<=range.end;
-  }).sort((a,b)=>(a.datum||"").localeCompare(b.datum||"") || (a.project||"").localeCompare(b.project||""));
-  return {list,range,info};
-}
-function printCompactWeekReport(){
-  const {list,range,info}=currentWeekItems();
-  const open=list.filter(isOpen);
-  const done=list.filter(x=>!isOpen(x));
-  const rows = htmlTable(
-    list,
-    ["Datum","Pand","Afwezig","Reden","Invaller"],
-    x=>[fmtDate(x.datum), esc(x.project), esc(x.afwezig), esc(x.reden), esc(x.invaller)||"—"]
-  );
-  const projectCounts=countBy(done,x=>x.project).slice(0,12);
-  const invallerCounts=countBy(done,x=>x.invaller).slice(0,12);
-  const compactProject=projectCounts.map(x=>`${esc(x[0])}: ${x[1]}`).join(" · ") || "Geen";
-  const compactInvaller=invallerCounts.map(x=>`${esc(x[0])}: ${x[1]}`).join(" · ") || "Geen";
-  const openHtml=open.length ? `<h2>Openstaand</h2>${htmlTable(open,["Datum","Pand","Afwezig"],x=>[fmtDate(x.datum),esc(x.project),esc(x.afwezig)])}` : "";
-  activateReport(`
-    <h1>Urenoverzicht invallers - Week ${info.week}</h1>
-    <div class="reportMeta">${fmtDate(range.start.toISOString().slice(0,10))} t/m ${fmtDate(range.end.toISOString().slice(0,10))}</div>
-    <div class="compactStats">
-      <span>${list.length} registraties</span>
-      <span>${done.length} geregeld</span>
-      <span>${open.length} openstaand</span>
-    </div>
-    <h2>Vervangingen deze week</h2>
-    ${rows}
-    <h2>Korte samenvatting per pand</h2>
-    <p style="font-size:11px;line-height:1.4">${compactProject}</p>
-    <h2>Korte samenvatting per invaller</h2>
-    <p style="font-size:11px;line-height:1.4">${compactInvaller}</p>
-    ${openHtml}
-  `);
-}
-function printAbsenceAnalysis(){
-  const base=new Date();
-  const range=weekRangeFromDate(base);
-  const info=isoWeekInfo(base);
-  const list=entries().filter(x=>{
-    if(!x.datum) return false;
-    const d=parseLocalDate(x.datum);
-    return d>=range.start && d<=range.end;
+
+function createWeekReportPdf(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'p', unit:'mm', format:'a4'});
+  const now = new Date();
+  const s = startOfWeek(now);
+  const e = endOfWeek(now);
+  const list = weekReportItems();
+  const open = list.filter(isOpen);
+  const done = list.filter(x=>!isOpen(x));
+  const title = 'Weekrapport invallerslogboek';
+  const subtitle = `Week ${weekNumber(now)} · ${fmtDate(isoDate(s))} t/m ${fmtDate(isoDate(e))}`;
+
+  doc.setFillColor(145,182,0);
+  doc.rect(0,0,210,18,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(16);
+  doc.text(title, 12, 12);
+
+  doc.setTextColor(31,41,55);
+  doc.setFontSize(11);
+  doc.text(subtitle, 12, 27);
+
+  doc.setFontSize(12);
+  doc.text(`Totaal: ${list.length}`, 12, 37);
+  doc.text(`Openstaand: ${open.length}`, 60, 37);
+  doc.text(`Geregeld: ${done.length}`, 118, 37);
+
+  let y = 48;
+
+  doc.setFontSize(13);
+  doc.text('Openstaande vervangingen', 12, y);
+  y += 4;
+  doc.autoTable({
+    startY:y,
+    head:[['Datum','Project','Afwezig','Reden','Objectleidster','Opmerking']],
+    body: open.length ? open.map(x=>[fmtDate(x.datum), x.project||'', x.afwezig||'', x.reden||'', x.objectleidster||'', x.opmerking||'']) : [['-','Geen openstaande vervangingen','','','','']],
+    styles:{fontSize:8, cellPadding:1.8},
+    headStyles:{fillColor:[153,27,27]},
+    margin:{left:8,right:8},
+    columnStyles:{0:{cellWidth:18},1:{cellWidth:45},2:{cellWidth:28},3:{cellWidth:20},4:{cellWidth:25},5:{cellWidth:45}}
   });
-  const byRegion=countBy(list,x=>inferRegion(x.project));
-  const byReason=countBy(list,x=>x.reden);
-  const byProject=countBy(list,x=>x.project).slice(0,15);
-  const byObject=countBy(list,x=>x.objectleidster);
-  const open=list.filter(isOpen);
-  activateReport(`
-    <h1>Analyse uitval / vervanging - Week ${info.week}</h1>
-    <div class="reportMeta">${fmtDate(range.start.toISOString().slice(0,10))} t/m ${fmtDate(range.end.toISOString().slice(0,10))}</div>
-    <div class="compactStats">
-      <span>${list.length} totaal</span>
-      <span>${open.length} openstaand</span>
-      <span>${byRegion.length} regio's</span>
-      <span>${byProject.length} panden</span>
-    </div>
-    <h2>Uitval per regio/plaats</h2>
-    ${htmlTable(byRegion,["Regio / plaats","Aantal"],x=>[esc(x[0]),String(x[1])])}
-    <h2>Uitval per reden</h2>
-    ${htmlTable(byReason,["Reden","Aantal"],x=>[esc(x[0]),String(x[1])])}
-    <h2>Top panden met vervanging</h2>
-    ${htmlTable(byProject,["Pand","Aantal"],x=>[esc(x[0]),String(x[1])])}
-    <h2>Per objectleidster</h2>
-    ${htmlTable(byObject,["Objectleidster","Aantal"],x=>[esc(x[0]),String(x[1])])}
-    <h2>Openstaande vervangingen</h2>
-    ${htmlTable(open,["Datum","Pand","Afwezig","Reden"],x=>[fmtDate(x.datum),esc(x.project),esc(x.afwezig),esc(x.reden)])}
-  `);
+
+  y = doc.lastAutoTable.finalY + 9;
+  if(y > 245){ doc.addPage(); y = 16; }
+
+  doc.setFontSize(13);
+  doc.text('Samenvatting per objectleidster', 12, y);
+  y += 4;
+  doc.autoTable({
+    startY:y,
+    head:[['Objectleidster','Aantal regels']],
+    body: countBy(list,'objectleidster').map(([k,v])=>[k,String(v)]),
+    styles:{fontSize:9},
+    headStyles:{fillColor:[145,182,0]},
+    margin:{left:12,right:12}
+  });
+
+  y = doc.lastAutoTable.finalY + 9;
+  if(y > 245){ doc.addPage(); y = 16; }
+
+  doc.setFontSize(13);
+  doc.text('Alle regels deze week', 12, y);
+  y += 4;
+  doc.autoTable({
+    startY:y,
+    head:[['Datum','Project','Afwezig','Invaller','Reden','Status','Objectleidster']],
+    body: list.length ? list.map(x=>[fmtDate(x.datum), x.project||'', x.afwezig||'', x.invaller||'—', x.reden||'', isOpen(x)?'Open':'Geregeld', x.objectleidster||'']) : [['-','Geen regels deze week','','','','','']],
+    styles:{fontSize:7, cellPadding:1.6},
+    headStyles:{fillColor:[145,182,0]},
+    margin:{left:6,right:6},
+    columnStyles:{0:{cellWidth:18},1:{cellWidth:42},2:{cellWidth:28},3:{cellWidth:28},4:{cellWidth:18},5:{cellWidth:20},6:{cellWidth:28}}
+  });
+
+  return doc;
+}
+
+function weekReportFilename(){
+  const now = new Date();
+  return `Invallerslogboek_Weekrapport_Week${weekNumber(now)}_${now.getFullYear()}.pdf`;
+}
+
+function downloadWeekReportPdf(){
+  const doc = createWeekReportPdf();
+  doc.save(weekReportFilename());
+}
+
+function uploadWeekReportToDrive(){
+  const doc = createWeekReportPdf();
+  const blob = doc.output('blob');
+  const reader = new FileReader();
+  reader.onloadend = async function(){
+    try{
+      await fetch(DRIVE_WEBAPP_URL, {
+        method:'POST',
+        mode:'no-cors',
+        body:JSON.stringify({
+          filename: weekReportFilename(),
+          file: reader.result
+        })
+      });
+      alert('Weekrapport verzonden naar Google Drive. Controleer je Drive-map.');
+    } catch(err){
+      alert('Upload mislukt: ' + err);
+    }
+  };
+  reader.readAsDataURL(blob);
 }
 
 function exportCsv(){
@@ -439,3 +455,4 @@ render();
 </script>
 </body>
 </html>
+
