@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Schoonmaakcontrole </title>
+<title>Schoonmaakcontrole formulier v6</title>
 <style>
 :root{
   --green:#91b600;--dark:#1f2937;--line:#d9dee7;--bg:#f4f6f8;
@@ -46,9 +46,11 @@ canvas{width:100%;height:110px;border:2px dashed var(--line);border-radius:12px;
  .issueNote{display:block!important}
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
-  <div style="padding:12px 15px;background:#91b600;">
+<div style="padding:12px 15px;background:#91b600;">
   <a href="index.html" style="font-weight:bold;text-decoration:none;color:white;">
     ← Terug naar Dashboard
   </a>
@@ -95,6 +97,7 @@ canvas{width:100%;height:110px;border:2px dashed var(--line);border-radius:12px;
 <section class="card noPrint">
   <div class="actions">
     <button class="primary" onclick="window.print()">PDF maken / printen</button>
+    <button class="primary" onclick="saveControlToDrive()">☁️ Controle opslaan</button>
     <button class="danger" onclick="resetForm()">Nieuw formulier</button>
   </div>
   <p class="small">Sla de PDF op in Downloads, OneDrive of Google Drive. Geen betaald abonnement nodig.</p>
@@ -229,6 +232,165 @@ function collect(){
     return {name:r.querySelector(".rname").value,type:r.querySelector(".rtype").value,notes:r.querySelector(".rnotes").value,points};
   });
   return {object:object.value,projectnr:projectnr.value,datum:datum.value,controleur:controleur.value,medewerker:medewerker.value,contact:contact.value,generalNotes:generalNotes.value,rooms:allRooms};
+}
+
+
+const DRIVE_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzlpikfaWrer03_VNdYA-i56iPwZ0q5u-g9jSCdBPwjHqrqrXv-r5LgjKoQXyzzhDhK/exec';
+
+function safeFilePart(s){
+  return String(s||'').trim().replace(/[^a-z0-9\-_]+/gi,'_').replace(/_+/g,'_').replace(/^_|_$/g,'') || 'Onbekend';
+}
+
+function calcStatsFromData(data){
+  let goed=0,vuil=0,methode=0,periodiek=0,total=0;
+  (data.rooms||[]).forEach(r=>{
+    (r.points||[]).forEach(p=>{
+      if(!p.name) return;
+      total++;
+      if(p.result==='Goed') goed++;
+      if(p.result==='Vuil') vuil++;
+      if(p.result==='Methode') methode++;
+      if(p.result==='Periodiek') periodiek++;
+    });
+  });
+  const percent = total ? Math.round((goed/total)*100) : 0;
+  return {goed,vuil,methode,periodiek,total,percent};
+}
+
+function createControlPdf(data){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({orientation:'p', unit:'mm', format:'a4'});
+  const stats = calcStatsFromData(data);
+
+  doc.setFillColor(145,182,0);
+  doc.rect(0,0,210,18,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(16);
+  doc.text('Schoonmaakcontrole', 12, 12);
+
+  doc.setTextColor(31,41,55);
+  doc.setFontSize(11);
+  let y = 27;
+  doc.text(`Object: ${data.object || ''}`, 12, y); y += 7;
+  doc.text(`Projectnummer: ${data.projectnr || '-'}`, 12, y); y += 7;
+  doc.text(`Datum: ${data.datum || ''}`, 12, y); y += 7;
+  doc.text(`Controleur: ${data.controleur || ''}`, 12, y); y += 7;
+  doc.text(`Medewerker: ${data.medewerker || ''}`, 12, y); y += 7;
+  doc.text(`Contactpersoon: ${data.contact || ''}`, 12, y); y += 9;
+
+  doc.setFontSize(14);
+  doc.text(`Kwaliteitsscore: ${stats.percent}%`, 12, y); y += 7;
+  doc.setFontSize(10);
+  doc.text(`Controlepunten: ${stats.total} · Goed: ${stats.goed} · Vuil: ${stats.vuil} · Methode: ${stats.methode} · Periodiek: ${stats.periodiek}`, 12, y);
+  y += 10;
+
+  if(data.generalNotes){
+    doc.setFontSize(12);
+    doc.text('Algemene opmerkingen', 12, y); y += 5;
+    const lines = doc.splitTextToSize(data.generalNotes, 185);
+    doc.setFontSize(9);
+    doc.text(lines, 12, y);
+    y += Math.min(lines.length * 4 + 6, 35);
+  }
+
+  (data.rooms||[]).forEach((room, idx)=>{
+    if(y > 235){ doc.addPage(); y = 16; }
+    doc.setFontSize(13);
+    doc.setTextColor(31,41,55);
+    doc.text(`Ruimte ${idx+1}: ${room.name || 'Onbenoemd'} (${room.type || ''})`, 12, y);
+    y += 5;
+
+    const body = (room.points||[]).filter(p=>p.name).map(p=>[
+      p.name || '',
+      p.result || '',
+      p.note || ''
+    ]);
+
+    doc.autoTable({
+      startY:y,
+      head:[['Controlepunt','Resultaat','Opmerking']],
+      body: body.length ? body : [['Geen controlepunten','','']],
+      styles:{fontSize:8, cellPadding:1.5},
+      headStyles:{fillColor:[145,182,0]},
+      margin:{left:8,right:8},
+      columnStyles:{0:{cellWidth:65},1:{cellWidth:25},2:{cellWidth:95}}
+    });
+    y = doc.lastAutoTable.finalY + 6;
+
+    if(room.notes){
+      if(y > 250){ doc.addPage(); y = 16; }
+      doc.setFontSize(9);
+      doc.text('Opmerking ruimte:', 12, y);
+      y += 4;
+      doc.text(doc.splitTextToSize(room.notes, 185), 12, y);
+      y += 10;
+    }
+  });
+
+  const sigData = canvas.toDataURL('image/png');
+  if(sigData && sigData.length > 1000){
+    if(y > 220){ doc.addPage(); y = 16; }
+    doc.setFontSize(12);
+    doc.text('Handtekening opdrachtgever', 12, y);
+    y += 5;
+    doc.addImage(sigData, 'PNG', 12, y, 80, 25);
+  }
+
+  return doc;
+}
+
+function controlFilename(ext){
+  const data = collect();
+  return `Schoonmaakcontrole_${safeFilePart(data.object)}_${safeFilePart(data.datum)}.${ext}`;
+}
+
+function uploadBlobToDrive(blob, filename, mimeType){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onloadend = async function(){
+      try{
+        await fetch(DRIVE_WEBAPP_URL, {
+          method:'POST',
+          mode:'no-cors',
+          body:JSON.stringify({
+            filename: filename,
+            mimeType: mimeType,
+            file: reader.result
+          })
+        });
+        resolve();
+      } catch(err){
+        reject(err);
+      }
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function saveControlToDrive(){
+  try{
+    const data = collect();
+    const stats = calcStatsFromData(data);
+    data.stats = stats;
+    data.savedAt = new Date().toISOString();
+
+    if(!data.object || !data.datum || !data.controleur){
+      if(!confirm('Object, datum of controleur is niet volledig ingevuld. Toch opslaan naar Drive?')) return;
+    }
+
+    const pdf = createControlPdf(data);
+    const pdfBlob = pdf.output('blob');
+    const jsonBlob = new Blob([JSON.stringify(data,null,2)], {type:'application/json;charset=utf-8'});
+
+    await uploadBlobToDrive(pdfBlob, controlFilename('pdf'), 'application/pdf');
+    await uploadBlobToDrive(jsonBlob, controlFilename('json'), 'application/json');
+
+    localStorage.setItem("schoonmaakcontrole_v6", JSON.stringify(data));
+    alert('Controle opgeslagen in Google Drive als PDF én JSON.');
+  } catch(err){
+    alert('Opslaan naar Drive mislukt: ' + err);
+  }
 }
 
 function save(){localStorage.setItem("schoonmaakcontrole_v6",JSON.stringify(collect()));alert("Opgeslagen op deze tablet/laptop.");}
