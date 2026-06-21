@@ -39,6 +39,8 @@ canvas{width:100%;height:110px;border:2px dashed var(--line);border-radius:12px;
 .small{font-size:13px;color:#6b7280;line-height:1.35}
 .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 .badge{display:inline-block;background:#eef3d8;padding:6px 10px;border-radius:999px;font-weight:900;margin-top:8px}
+.conceptItem{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:#fff;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+.conceptItem strong{display:block}.conceptActions{display:flex;gap:8px;flex-wrap:wrap}.conceptActions button{font-size:14px;padding:8px 10px}
 @media(max-width:700px){.grid,.pointTop{grid-template-columns:1fr}button{width:100%}.opts{grid-template-columns:1fr 1fr}.roomHead{align-items:flex-start}.opts label{font-size:16px}}
 @media print{ .printSummary{display:block!important} header img{height:40px} 
  body{background:white}.noPrint{display:none!important}.card{box-shadow:none;border:1px solid #ddd;break-inside:avoid}header{color:#111;background:white;border-bottom:4px solid var(--green)}
@@ -71,7 +73,18 @@ canvas{width:100%;height:110px;border:2px dashed var(--line);border-radius:12px;
 <section class="card noPrint">
   <button class="primary" onclick="addRoom()">➕ Nieuwe ruimte toevoegen</button>
   <button class="secondary" onclick="save()">Opslaan op tablet</button>
+  <button class="primary" onclick="saveConcept()">💾 Opslaan als conceptcontrole</button>
   <button class="secondary" onclick="loadSaved()">Laatst opgeslagen laden</button>
+</section>
+
+<section class="card noPrint">
+  <h2 style="margin:0 0 8px 0">📋 Conceptcontroles voor klantgesprek</h2>
+  <p class="small">Sla eerst controles per medewerker op als concept. Tijdens het klantgesprek kun je ze hier openen/toelichten. Laat de klant daarna één keer tekenen en sla de geselecteerde controles naar Drive op.</p>
+  <div id="conceptList"></div>
+  <div class="actions">
+    <button class="primary" onclick="saveSelectedConceptsToDrive()">☁️ Geselecteerde concepten met handtekening naar Drive</button>
+    <button class="danger" onclick="deleteAllConcepts()">Alle concepten wissen</button>
+  </div>
 </section>
 
 <section class="card printSummary" style="display:none"><h3>Controleoverzicht</h3><div id="printSummaryContent"></div></section><div id="rooms"></div><section class="card noPrint"><button class="primary" onclick="addRoom()">➕ Nieuwe ruimte toevoegen</button></section>
@@ -130,6 +143,7 @@ const presets = {
 };
 
 let roomCount=0;
+let currentConceptId=null;
 datum.valueAsDate = new Date();
 
 function esc(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
@@ -327,7 +341,7 @@ function createControlPdf(data){
     }
   });
 
-  const sigData = canvas.toDataURL('image/png');
+  const sigData = data.signature || canvas.toDataURL('image/png');
   if(sigData && sigData.length > 1000){
     if(y > 220){ doc.addPage(); y = 16; }
     doc.setFontSize(12);
@@ -341,7 +355,7 @@ function createControlPdf(data){
 
 function controlFilename(ext){
   const data = collect();
-  return `Schoonmaakcontrole_${safeFilePart(data.object)}_${safeFilePart(data.datum)}.${ext}`;
+  return `Schoonmaakcontrole_${safeFilePart(data.object)}_${safeFilePart(data.medewerker)}_${safeFilePart(data.datum)}.${ext}`;
 }
 
 function uploadBlobToDrive(blob, filename, mimeType){
@@ -393,6 +407,143 @@ async function saveControlToDrive(){
   }
 }
 
+
+const CONCEPT_KEY = "schoonmaakcontrole_concepten_v1";
+
+function concepts(){
+  try { return JSON.parse(localStorage.getItem(CONCEPT_KEY)||"[]"); }
+  catch(e){ return []; }
+}
+
+function setConcepts(list){
+  localStorage.setItem(CONCEPT_KEY, JSON.stringify(list));
+  renderConcepts();
+}
+
+function conceptTitle(data){
+  return `${data.object || 'Onbekend object'} · ${data.medewerker || 'Onbekende medewerker'} · ${data.datum || ''}`;
+}
+
+function saveConcept(){
+  const data = collect();
+  data.stats = calcStatsFromData(data);
+  data.conceptSavedAt = new Date().toISOString();
+
+  if(!data.object || !data.datum || !data.medewerker){
+    if(!confirm('Object, datum of medewerker is niet volledig ingevuld. Toch als concept opslaan?')) return;
+  }
+
+  const list = concepts();
+  const id = currentConceptId || (Date.now().toString(36)+Math.random().toString(16).slice(2));
+  const item = {id, data};
+  const next = list.some(x=>x.id===id) ? list.map(x=>x.id===id ? item : x) : [item, ...list];
+  currentConceptId = id;
+  setConcepts(next);
+  localStorage.setItem("schoonmaakcontrole_v6", JSON.stringify(data));
+  alert('Conceptcontrole opgeslagen.');
+}
+
+function loadConcept(id){
+  const item = concepts().find(x=>x.id===id);
+  if(!item) return;
+  const data = item.data || {};
+  currentConceptId = id;
+  object.value=data.object||"";
+  projectnr.value=data.projectnr||"";
+  datum.value=data.datum||"";
+  controleur.value=data.controleur||"";
+  medewerker.value=data.medewerker||"";
+  contact.value=data.contact||"";
+  generalNotes.value=data.generalNotes||"";
+  rooms.innerHTML="";
+  roomCount=0;
+  (data.rooms||[]).forEach(addRoom);
+  clearSig();
+  calcScore();
+  window.scrollTo({top:0,behavior:'smooth'});
+  alert('Concept geladen. Je kunt hem nu toelichten, aanpassen of opnieuw als concept opslaan.');
+}
+
+function deleteConcept(id){
+  if(!confirm('Dit concept verwijderen?')) return;
+  setConcepts(concepts().filter(x=>x.id!==id));
+  if(currentConceptId===id) currentConceptId=null;
+}
+
+function renderConcepts(){
+  const list = concepts();
+  if(!document.getElementById('conceptList')) return;
+  if(!list.length){
+    conceptList.innerHTML = '<div class="small">Nog geen conceptcontroles opgeslagen.</div>';
+    return;
+  }
+  conceptList.innerHTML = list.map(item=>{
+    const d = item.data || {};
+    const stats = d.stats || calcStatsFromData(d);
+    return `<div class="conceptItem">
+      <input type="checkbox" class="conceptCheck" value="${item.id}" style="width:24px;height:24px">
+      <div>
+        <strong>${esc(conceptTitle(d))}</strong>
+        <span class="small">Score ${stats.percent||0}% · ${stats.total||0} punten · ${esc(d.controleur||'')}</span>
+      </div>
+      <div class="conceptActions">
+        <button class="secondary" onclick="loadConcept('${item.id}')">Open</button>
+        <button class="danger" onclick="deleteConcept('${item.id}')">Verwijder</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function selectedConceptIds(){
+  return [...document.querySelectorAll('.conceptCheck:checked')].map(x=>x.value);
+}
+
+async function saveSelectedConceptsToDrive(){
+  const ids = selectedConceptIds();
+  if(!ids.length){ alert('Selecteer eerst één of meer conceptcontroles.'); return; }
+
+  const sigData = canvas.toDataURL('image/png');
+  if(!sigData || sigData.length < 1000){
+    alert('Laat de klant eerst onderaan tekenen. Deze handtekening wordt toegevoegd aan de geselecteerde controles.');
+    return;
+  }
+
+  const list = concepts().filter(x=>ids.includes(x.id));
+  if(!confirm(`${list.length} controle(s) opslaan naar Drive met dezelfde klant-handtekening?`)) return;
+
+  try{
+    for(const item of list){
+      const data = item.data || {};
+      data.signature = sigData;
+      data.stats = calcStatsFromData(data);
+      data.savedAt = new Date().toISOString();
+
+      const pdf = createControlPdf(data);
+      const pdfBlob = pdf.output('blob');
+      const jsonBlob = new Blob([JSON.stringify(data,null,2)], {type:'application/json;charset=utf-8'});
+
+      const base = `Schoonmaakcontrole_${safeFilePart(data.object)}_${safeFilePart(data.medewerker)}_${safeFilePart(data.datum)}`;
+      await uploadBlobToDrive(pdfBlob, base + '.pdf', 'application/pdf');
+      await uploadBlobToDrive(jsonBlob, base + '.json', 'application/json');
+    }
+
+    if(confirm('Controles opgeslagen in Drive. Wil je de opgeslagen concepten nu verwijderen?')){
+      setConcepts(concepts().filter(x=>!ids.includes(x.id)));
+    } else {
+      renderConcepts();
+    }
+    alert('Klaar. De geselecteerde controles zijn opgeslagen als PDF én JSON.');
+  }catch(err){
+    alert('Opslaan naar Drive mislukt: ' + err);
+  }
+}
+
+function deleteAllConcepts(){
+  if(!confirm('Alle conceptcontroles wissen?')) return;
+  setConcepts([]);
+  currentConceptId=null;
+}
+
 function save(){localStorage.setItem("schoonmaakcontrole_v6",JSON.stringify(collect()));alert("Opgeslagen op deze tablet/laptop.");}
 function loadSaved(){
   const data=JSON.parse(localStorage.getItem("schoonmaakcontrole_v6")||localStorage.getItem("schoonmaakcontrole_v4")||localStorage.getItem("schoonmaakcontrole_v3")||"{}");
@@ -414,6 +565,7 @@ function clearSig(){ctx.clearRect(0,0,canvas.width,canvas.height);}
 addRoom({type:"Entree"});
 addRoom({type:"Kantoor"});
 addRoom({type:"Toilet / sanitair"});
+renderConcepts();
 </script>
 </body>
 </html>
