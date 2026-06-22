@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eresde Projectbeheer + QR v5 Auto Drive</title>
+<style>
+:root{--green:#91b600;--dark:#1f2937;--line:#d9dee7;--bg:#f4f6f8;--soft:#eef3d8;--danger:#fee2e2;--dangerText:#991b1b;--ok:#dcfce7;--okText:#166534;--warn:#fff7ed;--warnText:#9a3412}
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:var(--dark)}
+.topbar{padding:12px 15px;background:var(--green)}
+.topbar a{font-weight:bold;text-decoration:none;color:white}
+header{background:var(--green);color:white;padding:18px 16px;font-size:23px;font-weight:900}
+main{max-width:1080px;margin:auto;padding:14px}
+.card{background:white;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+label{font-size:14px;font-weight:900;margin-bottom:5px;display:block}
+input,select,textarea{width:100%;font-size:18px;padding:12px;border:1px solid var(--line);border-radius:11px;background:white}
+textarea{min-height:70px}
+button{font-size:18px;padding:13px 16px;border:0;border-radius:12px;font-weight:900;cursor:pointer}
+.primary{background:var(--green);color:white}.secondary{background:#e5e7eb;color:#111827}.danger{background:var(--danger);color:var(--dangerText)}.warn{background:var(--warn);color:var(--warnText)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.small{font-size:13px;color:#6b7280;line-height:1.35}
+table{width:100%;border-collapse:collapse;margin-top:12px;background:white}
+th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;font-size:14px;vertical-align:top}
+th{background:#f9fafb;font-weight:900}
+.empty{padding:20px;text-align:center;color:#6b7280;font-weight:700}
+.badge{display:inline-block;background:#eef3d8;padding:5px 9px;border-radius:999px;font-weight:900;font-size:13px}
+.badge.warn{background:var(--warn);color:var(--warnText)}
+.qrGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:12px}
+.qrCard{border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center;background:white;break-inside:avoid}
+.qrCard strong{display:block;margin-top:8px}
+.qrBox{display:flex;justify-content:center;align-items:center;min-height:150px}
+.rowActions button{font-size:13px;padding:7px 9px;margin:2px}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
+.kpi{background:var(--soft);border-radius:13px;padding:11px;font-weight:900;text-align:center}.kpi .num{font-size:28px;color:var(--green)}
+@media(max-width:760px){.grid,.grid3,.qrGrid,.summary{grid-template-columns:1fr}button{width:100%}table,thead,tbody,tr,td,th{display:block}thead{display:none}tr{border:1px solid var(--line);border-radius:12px;margin:10px 0;padding:8px;background:white}td{border:0;padding:6px 4px}td:before{content:attr(data-label);display:block;font-weight:900;font-size:12px;color:#6b7280}.rowActions button{width:auto}}
+@media print{body{background:white}.noPrint{display:none!important}.card{box-shadow:none;border:0}.topbar,header{display:none}.qrGrid{grid-template-columns:repeat(3,1fr)}.qrCard{page-break-inside:avoid}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<div class="topbar"><a href="index.html">← Terug naar Dashboard</a></div>
+<header>📁 Projectbeheer + QR <span style="font-size:14px;font-weight:700;opacity:.9">v5 Auto Drive</span></header>
+<main>
+
+<section class="card noPrint">
+  <h2 style="margin:0 0 8px 0">➕ Project toevoegen / wijzigen</h2>
+  <div class="grid">
+    <div><label>Project / klantnaam</label><input id="naam" placeholder="Bijv. Damen - Harlingen"></div>
+    <div><label>Projectnummer</label><input id="projectnr" placeholder="Bijv. 12345"></div>
+    <div><label>Plaats</label><input id="plaats" placeholder="Bijv. Harlingen"></div>
+    <div><label>Rayonleidster</label>
+      <select id="rayonleidster">
+        <option value="">Kies rayonleidster...</option>
+        <option>Ilona</option>
+        <option>Wieteke</option>
+        <option>Jan</option>
+        <option>Katinka</option>
+        <option>Harmen</option>
+        <option>Anders</option>
+      </select>
+    </div>
+    <div><label>Contactpersoon</label><input id="contact" placeholder="Optioneel"></div>
+    <div><label>Eigen code <span style="font-weight:400;color:#6b7280">(optioneel)</span></label><input id="customCode" placeholder="Leeg laten = automatisch"></div>
+  </div>
+  <label style="margin-top:12px">Opmerking</label>
+  <textarea id="opmerking" placeholder="Optioneel, bijvoorbeeld toegangscode, kastlocatie of bijzonderheden"></textarea>
+  <div class="actions">
+    <button class="primary" onclick="saveProject()">Project opslaan + Drive sync</button>
+    <button class="secondary" onclick="clearForm()">Velden leegmaken</button>
+  </div>
+  <p class="small">QR-code bevat een vaste projectcode. Later kunnen je tools die code scannen en automatisch objectnaam, projectnummer en rayonleidster invullen.</p>
+<p class="small" id="syncStatus">Drive-sync: nog niet gestart.</p>
+</section>
+
+<section class="card">
+  <h2 style="margin:0 0 8px 0">Dashboard projecten</h2>
+  <div class="summary">
+    <div class="kpi"><div class="num" id="kpiTotal">0</div>projecten</div>
+    <div class="kpi"><div class="num" id="kpiIlona">0</div>Ilona</div>
+    <div class="kpi"><div class="num" id="kpiWieteke">0</div>Wieteke</div>
+    <div class="kpi"><div class="num" id="kpiOther">0</div>overig</div>
+  </div>
+</section>
+
+<section class="card">
+  <h2 style="margin:0 0 8px 0">Projectenlijst</h2>
+  <div class="grid3 noPrint">
+    <div><label>Zoeken</label><input id="zoek" oninput="render()" placeholder="Naam, projectnr, plaats"></div>
+    <div><label>Filter rayonleidster</label>
+      <select id="filterRayon" onchange="render()">
+        <option value="">Alle rayonleidsters</option>
+        <option>Ilona</option>
+        <option>Wieteke</option>
+        <option>Jan</option>
+        <option>Katinka</option>
+        <option>Harmen</option>
+        <option>Anders</option>
+      </select>
+    </div>
+    <div><label>&nbsp;</label><button class="secondary" onclick="printQr()">Print QR-overzicht</button></div>
+  </div>
+  <div class="actions noPrint">
+    <button class="primary" onclick="document.getElementById('importFile').click()">📥 Import projects.json</button>
+    <input id="importFile" type="file" accept=".json,application/json" style="display:none" onchange="importProjectsJson(event)">
+    <button class="primary" onclick="saveProjectsToDrive()">☁️ Opslaan naar Drive</button>
+    <button class="secondary" onclick="loadProjectsFromDrive()">☁️ Laden uit Drive</button>
+    <button class="secondary" onclick="exportJson()">Export projects.json</button>
+    <button class="secondary" onclick="exportProjectsJs()">Export projects.js</button>
+    <button class="secondary" onclick="copyProjectsJs()">Kopieer projects.js tekst</button>
+    <button class="danger" onclick="deleteAll()">Alles wissen</button>
+  </div>
+  <div id="tableWrap"></div>
+</section>
+
+<section class="card">
+  <h2 style="margin:0 0 8px 0">QR-codes</h2>
+  <p class="small noPrint">Print deze pagina of filter eerst op rayonleidster en print alleen die QR-codes.</p>
+  <div id="qrWrap"></div>
+</section>
+
+</main>
+<script>
+const KEY = "eresde_projecten_v2";
+const OLD_KEY = "eresde_projecten_v1";
+let editingId = null;
+
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function projects(){
+  try{
+    const current = JSON.parse(localStorage.getItem(KEY)||"[]");
+    if(current.length) return current;
+    const old = JSON.parse(localStorage.getItem(OLD_KEY)||"[]");
+    if(old.length){
+      const migrated = old.map(p=>({...p, rayonleidster:p.rayonleidster||""}));
+      localStorage.setItem(KEY, JSON.stringify(migrated));
+      return migrated;
+    }
+    return [];
+  }catch(e){return[]}
+}
+function setProjects(list){localStorage.setItem(KEY, JSON.stringify(list)); render();}
+function slugify(s){
+  return String(s||"").trim().toUpperCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^A-Z0-9]+/g,"-").replace(/^-+|-+$/g,"") || "PROJECT";
+}
+function makeCode(naam, projectnr, customCode){
+  if(customCode && customCode.trim()) return slugify(customCode);
+  const base = slugify(naam);
+  return projectnr ? `${base}-${slugify(projectnr)}` : base;
+}
+function clearForm(){
+  editingId=null;
+  naam.value=""; projectnr.value=""; plaats.value=""; rayonleidster.value=""; contact.value=""; opmerking.value=""; customCode.value="";
+}
+async function saveProject(){
+  if(!naam.value.trim()){alert("Vul minimaal project / klantnaam in."); return;}
+  const item = {
+    id: editingId || Date.now().toString(36)+Math.random().toString(16).slice(2),
+    naam: naam.value.trim(),
+    projectnr: projectnr.value.trim(),
+    plaats: plaats.value.trim(),
+    rayonleidster: rayonleidster.value,
+    contact: contact.value.trim(),
+    opmerking: opmerking.value.trim(),
+    code: makeCode(naam.value, projectnr.value, customCode.value),
+    updated: new Date().toISOString()
+  };
+  let list = projects();
+  if(list.some(x=>x.id!==editingId && x.code===item.code)){
+    alert("Deze projectcode bestaat al. Gebruik een andere eigen code of wijzig de projectnaam/projectnummer.");
+    return;
+  }
+  if(editingId) list = list.map(x=>x.id===editingId ? {...x,...item} : x);
+  else list.unshift(item);
+  setProjects(list);
+  clearForm();
+  try{
+    await saveProjectsToDrive(false);
+    alert("Project opgeslagen en naar Drive gesynchroniseerd.");
+  }catch(err){
+    alert("Project lokaal opgeslagen, maar Drive-sync is mislukt: " + err);
+  }
+}
+function editProject(id){
+  const x = projects().find(p=>p.id===id); if(!x)return;
+  editingId=id;
+  naam.value=x.naam||""; projectnr.value=x.projectnr||""; plaats.value=x.plaats||""; rayonleidster.value=x.rayonleidster||""; contact.value=x.contact||""; opmerking.value=x.opmerking||""; customCode.value=x.code||"";
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function deleteProject(id){
+  if(!confirm("Project verwijderen?")) return;
+  setProjects(projects().filter(x=>x.id!==id));
+}
+function deleteAll(){
+  if(!confirm("Alle projecten wissen?")) return;
+  setProjects([]);
+}
+function qrPayload(p){
+  return `ERESDE_PROJECT:${p.code}`;
+}
+function filteredProjects(){
+  const q=(zoek.value||"").toLowerCase();
+  const fr=filterRayon.value;
+  let list=projects().sort((a,b)=>(a.naam||"").localeCompare(b.naam||""));
+  if(fr) list=list.filter(p=>p.rayonleidster===fr);
+  if(q) list=list.filter(p=>[p.naam,p.projectnr,p.plaats,p.contact,p.code,p.rayonleidster].join(" ").toLowerCase().includes(q));
+  return list;
+}
+function updateKpis(){
+  const list=projects();
+  kpiTotal.textContent=list.length;
+  kpiIlona.textContent=list.filter(p=>p.rayonleidster==="Ilona").length;
+  kpiWieteke.textContent=list.filter(p=>p.rayonleidster==="Wieteke").length;
+  kpiOther.textContent=list.filter(p=>p.rayonleidster && !["Ilona","Wieteke"].includes(p.rayonleidster)).length;
+}
+function renderTable(list){
+  if(!list.length){tableWrap.innerHTML='<div class="empty">Geen projecten gevonden.</div>';return;}
+  tableWrap.innerHTML = `<table><thead><tr><th>Project</th><th>Projectnr</th><th>Plaats</th><th>Rayonleidster</th><th>Code</th><th>Contact</th><th class="noPrint">Actie</th></tr></thead><tbody>${
+    list.map(p=>`<tr>
+      <td data-label="Project"><strong>${esc(p.naam)}</strong></td>
+      <td data-label="Projectnr">${esc(p.projectnr)}</td>
+      <td data-label="Plaats">${esc(p.plaats)}</td>
+      <td data-label="Rayonleidster"><span class="badge ${p.rayonleidster?'':'warn'}">${esc(p.rayonleidster||'Niet ingevuld')}</span></td>
+      <td data-label="Code"><span class="badge">${esc(p.code)}</span></td>
+      <td data-label="Contact">${esc(p.contact)}</td>
+      <td data-label="Actie" class="rowActions noPrint">
+        <button class="secondary" onclick="editProject('${p.id}')">Bewerk</button>
+        <button class="danger" onclick="deleteProject('${p.id}')">Verwijder</button>
+      </td>
+    </tr>`).join("")
+  }</tbody></table>`;
+}
+function renderQr(list){
+  qrWrap.innerHTML = `<div class="qrGrid">${
+    list.map(p=>`<div class="qrCard">
+      <div class="qrBox" id="qr_${p.id}"></div>
+      <strong>${esc(p.naam)}</strong>
+      <div class="small">Projectnr: ${esc(p.projectnr||"-")}</div>
+      <div class="small">Rayonleidster: ${esc(p.rayonleidster||"-")}</div>
+      <div class="small">Code: ${esc(p.code)}</div>
+    </div>`).join("")
+  }</div>`;
+  setTimeout(()=>{
+    list.forEach(p=>{
+      const el=document.getElementById("qr_"+p.id);
+      if(el){ el.innerHTML=""; new QRCode(el,{text:qrPayload(p),width:140,height:140}); }
+    });
+  },50);
+}
+
+function normalizeImportedProject(p){
+  const naam = p.naam || p.project || p.locatie || p.name || "";
+  const projectnr = String(p.projectnr || p.projectnummer || p["project nummer"] || p.project_no || "").trim();
+  const plaats = p.plaats || p.city || "";
+  const rayonleidster = p.rayonleidster || p.rayon || "";
+  const contact = p.contact || p.contactpersoon || "";
+  const opmerking = p.opmerking || p.note || "";
+  const code = p.code || makeCode(naam, projectnr, "");
+  return {
+    id: Date.now().toString(36)+Math.random().toString(16).slice(2),
+    naam: String(naam).trim(),
+    projectnr,
+    plaats: String(plaats).trim(),
+    rayonleidster: String(rayonleidster).trim(),
+    contact: String(contact).trim(),
+    opmerking: String(opmerking).trim(),
+    code,
+    updated: new Date().toISOString()
+  };
+}
+
+function importProjectsJson(event){
+  const file = event.target.files && event.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(){
+    try{
+      const data = JSON.parse(reader.result);
+      if(!Array.isArray(data)){
+        alert("Dit JSON-bestand bevat geen projectenlijst.");
+        return;
+      }
+
+      const imported = data
+        .map(normalizeImportedProject)
+        .filter(p => p.naam);
+
+      if(!imported.length){
+        alert("Geen geldige projecten gevonden.");
+        return;
+      }
+
+      const existing = projects();
+      const existingByCode = new Map(existing.map(p => [p.code, p]));
+      imported.forEach(p => {
+        if(existingByCode.has(p.code)){
+          const old = existingByCode.get(p.code);
+          existingByCode.set(p.code, {...old, ...p, id: old.id});
+        } else {
+          existingByCode.set(p.code, p);
+        }
+      });
+
+      const merged = [...existingByCode.values()].sort((a,b)=>(a.naam||"").localeCompare(b.naam||""));
+      setProjects(merged);
+      alert(`${imported.length} project(en) geïmporteerd. Totaal nu: ${merged.length}.`);
+    }catch(err){
+      alert("Import mislukt: " + err);
+    }finally{
+      event.target.value = "";
+    }
+  };
+  reader.readAsText(file, "utf-8");
+}
+
+
+const PROJECTDATA_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbysDHylCUtXBOO3P2ftygHcCE22UQXO822UYPWm33AHQD-wEH_54FpDu_DBN7Nwz29n/exec';
+
+async function saveProjectsToDrive(showAlert=true){
+  const status = document.getElementById('syncStatus');
+  try{
+    if(status) status.textContent = 'Drive-sync: opslaan...';
+    const content = JSON.stringify(cleanProjectsForExport(), null, 2);
+    await fetch(PROJECTDATA_WEBAPP_URL, {
+      method:'POST',
+      mode:'no-cors',
+      body:JSON.stringify({ content })
+    });
+    if(status) status.textContent = 'Drive-sync: opgeslagen naar Drive om ' + new Date().toLocaleTimeString('nl-NL');
+    if(showAlert) alert('Projectenlijst verzonden naar Drive.');
+  }catch(err){
+    if(status) status.textContent = 'Drive-sync: opslaan mislukt.';
+    if(showAlert) alert('Opslaan naar Drive mislukt: ' + err);
+    throw err;
+  }
+}
+
+async function loadProjectsFromDrive(auto=false){
+  const status = document.getElementById('syncStatus');
+  try{
+    if(status) status.textContent = 'Drive-sync: laden uit Drive...';
+    const res = await fetch(PROJECTDATA_WEBAPP_URL + '?t=' + Date.now());
+    const data = await res.json();
+    if(!Array.isArray(data)){
+      if(status) status.textContent = 'Drive-sync: Drive-bestand bevat geen projectenlijst.';
+      if(!auto) alert('Drive-bestand bevat geen projectenlijst.');
+      return;
+    }
+    const imported = data.map(normalizeImportedProject).filter(p=>p.naam);
+    const existingByCode = new Map(imported.map(p=>[p.code,p]));
+    const merged = [...existingByCode.values()].sort((a,b)=>(a.naam||'').localeCompare(b.naam||''));
+    setProjects(merged);
+    if(status) status.textContent = `Drive-sync: ${merged.length} project(en) geladen uit Drive om ` + new Date().toLocaleTimeString('nl-NL');
+    if(!auto) alert(`${merged.length} project(en) geladen uit Drive.`);
+  }catch(err){
+    if(status) status.textContent = 'Drive-sync: laden mislukt.';
+    if(!auto) alert('Laden uit Drive mislukt: ' + err);
+  }
+}
+
+function render(){
+  updateKpis();
+  const list=filteredProjects();
+  renderTable(list);
+  renderQr(list);
+}
+function printQr(){window.print();}
+function cleanProjectsForExport(){
+  return projects().map(p=>({
+    naam:p.naam,
+    projectnr:p.projectnr,
+    plaats:p.plaats,
+    rayonleidster:p.rayonleidster,
+    contact:p.contact,
+    opmerking:p.opmerking,
+    code:p.code
+  }));
+}
+function downloadText(filename, text, type){
+  const blob=new Blob([text],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download=filename; a.click();
+  URL.revokeObjectURL(url);
+}
+function exportJson(){
+  downloadText("projects.json", JSON.stringify(cleanProjectsForExport(),null,2), "application/json;charset=utf-8");
+}
+function projectsJsText(){
+  return "const ERESDE_PROJECTS = " + JSON.stringify(cleanProjectsForExport(),null,2) + ";";
+}
+function exportProjectsJs(){
+  downloadText("projects.js", projectsJsText(), "text/javascript;charset=utf-8");
+}
+async function copyProjectsJs(){
+  try{
+    await navigator.clipboard.writeText(projectsJsText());
+    alert("projects.js tekst gekopieerd.");
+  }catch(e){
+    alert("Kopiëren lukt niet. Gebruik dan Export projects.js.");
+  }
+}
+render();
+loadProjectsFromDrive(true);
+</script>
+</body>
+</html>
