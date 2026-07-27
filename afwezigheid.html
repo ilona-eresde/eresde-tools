@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Afwezigheid & vervanging</title>
+<style>
+:root{
+  --green:#95c11f;--green-dark:#769b10;--soft:#eef5d8;--bg:#f3f5f7;
+  --card:#fff;--text:#172033;--muted:#667085;--line:#d9dee7;
+  --red:#b42318;--orange:#f59e0b;--blue:#2563eb;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
+header{background:var(--green);color:#fff;padding:0 0 24px}
+.toplink{display:inline-block;color:#fff;text-decoration:none;font-weight:800;padding:10px 18px}
+.header-inner{max-width:1180px;margin:auto;padding:18px}
+.header-inner h1{margin:0 0 5px;font-size:31px}
+.header-inner p{margin:0;opacity:.95}
+main{max-width:1180px;margin:0 auto;padding:24px 16px 50px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 7px 22px rgba(31,41,55,.07);margin-bottom:18px}
+h2{margin:0 0 14px} h3{margin:18px 0 10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+label{display:block;font-weight:800;font-size:14px;margin-bottom:6px}
+input,select,textarea{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:11px;font:inherit;background:#fff}
+textarea{min-height:88px;resize:vertical}
+button{border:0;border-radius:11px;padding:12px 15px;font:inherit;font-weight:900;cursor:pointer}
+.primary{background:var(--green);color:#fff} .secondary{background:#e7eaf0;color:var(--text)} .danger{background:#fee4e2;color:var(--red)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.small{font-size:13px;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:var(--soft);border-radius:14px;padding:15px;text-align:center;font-weight:900}
+.kpi .num{font-size:30px;color:var(--green-dark);margin-bottom:3px}
+.sync{display:inline-flex;align-items:center;gap:7px;background:var(--soft);padding:8px 11px;border-radius:999px;font-size:13px;font-weight:800}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--green)} .dot.busy{background:var(--orange)} .dot.error{background:var(--red)}
+.employee-info{margin-top:12px;padding:13px;border-radius:12px;background:#fafafa;border:1px solid var(--line)}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px} .chip{background:var(--soft);padding:6px 9px;border-radius:999px;font-size:12px;font-weight:800}
+.service{border:1px solid var(--line);border-radius:13px;padding:13px;margin-top:10px;background:#fcfcfd}
+.service-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.service-grid{display:grid;grid-template-columns:1.1fr .8fr .8fr;gap:10px;margin-top:10px}
+.checkline{display:flex;align-items:center;gap:8px;font-weight:800} .checkline input{width:auto}
+table{width:100%;border-collapse:collapse} th,td{padding:11px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top} th{font-size:13px;color:var(--muted)}
+.badge{display:inline-block;padding:5px 8px;border-radius:999px;font-size:12px;font-weight:900;background:#edf2f7}
+.badge.open{background:#fff0c2;color:#8a5b00} .badge.done{background:#dcfae6;color:#067647} .badge.cancel{background:#f2f4f7;color:#475467}
+.empty{padding:22px;text-align:center;color:var(--muted);background:#fafafa;border-radius:12px}
+.toast{position:fixed;right:18px;bottom:18px;background:#1f2937;color:#fff;padding:13px 16px;border-radius:12px;font-weight:800;opacity:0;transform:translateY(15px);transition:.2s;pointer-events:none;z-index:99}
+.toast.show{opacity:1;transform:none} .toast.error{background:#991b1b}
+@media(max-width:850px){.grid2,.grid3,.kpis{grid-template-columns:1fr 1fr}.service-grid{grid-template-columns:1fr}}
+@media(max-width:560px){.grid2,.grid3,.kpis{grid-template-columns:1fr}.header-inner h1{font-size:25px}table,thead,tbody,tr,th,td{display:block}thead{display:none}tr{border:1px solid var(--line);border-radius:12px;margin-bottom:10px;padding:8px}td{border:0;padding:6px}}
+</style>
+</head>
+<body>
+<header>
+<a class="toplink" href="index.html">← Terug naar Dashboard</a>
+<div class="header-inner">
+  <h1>🏖️ Afwezigheid & vervanging</h1>
+  <p>Ziekte, vakantie, verlof en openstaande vervanging op één plek.</p>
+</div>
+</header>
+
+<main>
+<section class="card">
+<h2>Afwezigheid toevoegen / wijzigen</h2>
+<div class="grid2">
+  <div>
+    <label for="employee">Medewerker *</label>
+    <select id="employee"><option value="">Kies medewerker…</option></select>
+  </div>
+  <div>
+    <label for="reason">Reden *</label>
+    <select id="reason">
+      <option value="Ziek">Ziek</option><option value="Vakantie">Vakantie</option>
+      <option value="Verlof">Verlof</option><option value="Overig">Overig</option>
+    </select>
+  </div>
+  <div>
+    <label for="startDate">Begindatum *</label>
+    <input id="startDate" type="date">
+  </div>
+  <div>
+    <label for="endDate">Einddatum *</label>
+    <input id="endDate" type="date">
+  </div>
+</div>
+<div id="employeeInfo" class="employee-info small">Kies een medewerker om de gekoppelde projecten en het vaste rooster te zien.</div>
+<div>
+  <label for="note" style="margin-top:14px">Opmerking</label>
+  <textarea id="note" placeholder="Optioneel, bijvoorbeeld verwachte duur of bijzonderheden"></textarea>
+</div>
+
+<h3>Getroffen diensten</h3>
+<p class="small">Deze worden automatisch opgebouwd uit het vaste rooster binnen de gekozen periode. Je kunt ook handmatig een dienst toevoegen.</p>
+<div id="services"></div>
+<div class="actions">
+  <button class="secondary" type="button" onclick="addService()">+ Dienst toevoegen</button>
+</div>
+
+<div class="actions">
+  <button class="primary" type="button" onclick="saveAbsence()">Afwezigheid opslaan</button>
+  <button class="secondary" type="button" onclick="clearForm()">Velden leegmaken</button>
+  <span class="sync"><span id="syncDot" class="dot"></span><span id="syncText">Lokaal gereed</span></span>
+</div>
+</section>
+
+<section class="card">
+<h2>Dashboard</h2>
+<div class="kpis">
+  <div class="kpi"><div class="num" id="kpiOpen">0</div>open vervangingen</div>
+  <div class="kpi"><div class="num" id="kpiNow">0</div>nu afwezig</div>
+  <div class="kpi"><div class="num" id="kpiUpcoming">0</div>binnenkort</div>
+  <div class="kpi"><div class="num" id="kpiArranged">0</div>geregeld</div>
+</div>
+</section>
+
+<section class="card">
+<h2>Overzicht</h2>
+<div class="grid3">
+  <div><label for="search">Zoeken</label><input id="search" placeholder="Naam, project of reden"></div>
+  <div><label for="statusFilter">Status vervanging</label>
+    <select id="statusFilter"><option value="">Alle statussen</option><option value="Open">Open</option><option value="Geregeld">Geregeld</option><option value="Vervallen">Vervallen</option></select>
+  </div>
+  <div><label for="periodFilter">Periode</label>
+    <select id="periodFilter"><option value="">Alles</option><option value="current">Lopend</option><option value="upcoming">Toekomstig</option><option value="past">Voorbij</option></select>
+  </div>
+</div>
+<div class="actions">
+  <button class="secondary" onclick="loadFromDrive(false)">Laden uit Drive</button>
+  <button class="secondary" onclick="saveToDrive(true)">Opslaan naar Drive</button>
+</div>
+<div id="overview" style="margin-top:14px"></div>
+</section>
+</main>
+<div id="toast" class="toast"></div>
+
+<script>
+const EMPLOYEE_URL="https://script.google.com/macros/s/AKfycbwFp7kSF751T9ehWQUKVMwrldX90PTXDInxmC9FWSLARLUbKx5X_RaeNFHDmwnJyMje/exec";
+const PROJECT_URL="https://script.google.com/macros/s/AKfycbysDHylCUtXBOO3P2ftygHcCE22UQXO822UYPWm33AHQD-wEH_54FpDu_DBN7Nwz29n/exec";
+const ABSENCE_URL="https://script.google.com/macros/s/AKfycbxbd54nXvalM0wfdO4cMs6xdIqcpXBvXVPHl19bAweJOoAmHaP0X54Xe_BHnqhZjbsAKg/exec";
+const KEY="eresde_afwezigheid_v1";
+let employees=[],projects=[],editingId=null,serviceRows=[];
+
+const $=id=>document.getElementById(id);
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function showToast(msg,error=false){toast.textContent=msg;toast.className="toast show"+(error?" error":"");clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.className="toast",2500)}
+function setSync(msg,state="ok"){syncText.textContent=msg;syncDot.className="dot"+(state==="busy"?" busy":state==="error"?" error":"")}
+function records(){try{return JSON.parse(localStorage.getItem(KEY)||"[]")}catch{return []}}
+function setRecords(list,sync=true){localStorage.setItem(KEY,JSON.stringify(list));render();if(sync)saveToDrive(false)}
+function fullName(e){return [e.voornaam,e.achternaam].filter(Boolean).join(" ")}
+function configuredDrive(){return ABSENCE_URL.startsWith("https://script.google.com/")}
+function isoToday(){return new Date().toISOString().slice(0,10)}
+function dateNl(s){return s?new Date(s+"T00:00:00").toLocaleDateString("nl-NL"):"—"}
+function dayName(s){return ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"][new Date(s+"T00:00:00").getDay()]}
+function normalizeDay(v){return String(v||"").trim().toLowerCase().replace("don","donderdag").replace("din","dinsdag").replace("woe","woensdag").replace("vri","vrijdag").replace("maa","maandag")}
+
+async function loadSources(){
+  try{
+    const [er,pr]=await Promise.all([fetch(EMPLOYEE_URL+"?t="+Date.now()),fetch(PROJECT_URL+"?t="+Date.now())]);
+    employees=await er.json();projects=await pr.json();
+    employees=Array.isArray(employees)?employees:[];
+    projects=Array.isArray(projects)?projects:[];
+    employee.innerHTML='<option value="">Kies medewerker…</option>'+employees
+      .sort((a,b)=>fullName(a).localeCompare(fullName(b),"nl"))
+      .map(e=>`<option value="${esc(e.id)}">${esc(e.personeelsnr)} · ${esc(fullName(e))}</option>`).join("");
+    render();
+  }catch(e){showToast("Medewerkers of projecten konden niet worden geladen.",true)}
+}
+
+function selectedEmployee(){return employees.find(e=>e.id===employee.value)}
+function updateEmployeeInfo(){
+  const e=selectedEmployee();
+  if(!e){employeeInfo.innerHTML="Kies een medewerker om de gekoppelde projecten en het vaste rooster te zien.";return}
+  const ps=[...new Set([...(e.projecten||[]),...(e.rooster||[]).map(r=>r.project).filter(Boolean)])];
+  employeeInfo.innerHTML=`<strong>${esc(fullName(e))}</strong> · ${esc(e.rayonleidster||"Geen rayonleidster")} · ${esc(e.contracturen||"0")} uur
+  <div class="chips">${ps.length?ps.map(p=>`<span class="chip">${esc(p)}</span>`).join(""):'<span class="small">Geen projecten gekoppeld</span>'}</div>`;
+}
+
+function datesBetween(start,end){
+  if(!start||!end)return[];
+  const a=new Date(start+"T00:00:00"),b=new Date(end+"T00:00:00"),out=[];
+  for(let d=new Date(a);d<=b;d.setDate(d.getDate()+1))out.push(d.toISOString().slice(0,10));
+  return out;
+}
+function generateServices(){
+  const e=selectedEmployee();if(!e||!startDate.value||!endDate.value)return;
+  const roster=e.rooster||[],generated=[];
+  for(const date of datesBetween(startDate.value,endDate.value)){
+    const dn=dayName(date);
+    roster.filter(r=>normalizeDay(r.dag)===dn).forEach(r=>generated.push({
+      id:crypto.randomUUID?crypto.randomUUID():Date.now()+Math.random(),
+      date,project:r.project||"",begin:r.begin||"",end:r.eind||"",
+      replacementNeeded:true,replacementId:"",status:"Open",note:""
+    }));
+  }
+  serviceRows=generated;renderServices();
+}
+function addService(data={}){
+  serviceRows.push({
+    id:data.id||((crypto.randomUUID&&crypto.randomUUID())||Date.now()+Math.random()),
+    date:data.date||startDate.value||isoToday(),project:data.project||"",begin:data.begin||"",end:data.end||"",
+    replacementNeeded:data.replacementNeeded!==false,replacementId:data.replacementId||"",
+    status:data.status||"Open",note:data.note||""
+  });renderServices();
+}
+function updateService(id,key,value){const r=serviceRows.find(x=>String(x.id)===String(id));if(r)r[key]=value}
+function removeService(id){serviceRows=serviceRows.filter(x=>String(x.id)!==String(id));renderServices()}
+function renderServices(){
+  if(!serviceRows.length){services.innerHTML='<div class="empty">Geen diensten gevonden. Voeg eventueel handmatig een dienst toe.</div>';return}
+  const projectOptions=projects.map(p=>p.naam).filter(Boolean).sort((a,b)=>a.localeCompare(b,"nl"));
+  services.innerHTML=serviceRows.map(r=>`<div class="service">
+    <div class="service-head">
+      <div><strong>${dateNl(r.date)} · ${esc(r.project||"Project niet ingevuld")}</strong><div class="small">${esc(r.begin||"—")} – ${esc(r.end||"—")}</div></div>
+      <button class="danger" type="button" onclick="removeService('${r.id}')">Verwijder</button>
+    </div>
+    <div class="service-grid">
+      <div><label>Project</label><input list="projectList" value="${esc(r.project)}" onchange="updateService('${r.id}','project',this.value)"></div>
+      <div><label>Datum</label><input type="date" value="${esc(r.date)}" onchange="updateService('${r.id}','date',this.value)"></div>
+      <div><label>Tijd</label><div style="display:flex;gap:6px"><input type="time" value="${esc(r.begin)}" onchange="updateService('${r.id}','begin',this.value)"><input type="time" value="${esc(r.end)}" onchange="updateService('${r.id}','end',this.value)"></div></div>
+    </div>
+    <div class="service-grid">
+      <label class="checkline"><input type="checkbox" ${r.replacementNeeded?"checked":""} onchange="updateService('${r.id}','replacementNeeded',this.checked)"> Vervanging nodig</label>
+      <div><label>Invaller</label><select onchange="updateService('${r.id}','replacementId',this.value)">
+        <option value="">Nog niet gekozen</option>${employees.filter(e=>e.id!==employee.value).map(e=>`<option value="${esc(e.id)}" ${r.replacementId===e.id?"selected":""}>${esc(fullName(e))}</option>`).join("")}
+      </select></div>
+      <div><label>Status</label><select onchange="updateService('${r.id}','status',this.value)">
+        ${["Open","Geregeld","Vervallen"].map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
+      </select></div>
+    </div>
+  </div>`).join("")+`<datalist id="projectList">${projectOptions.map(p=>`<option value="${esc(p)}">`).join("")}</datalist>`;
+}
+
+function saveAbsence(){
+  const e=selectedEmployee();
+  if(!e||!startDate.value||!endDate.value){showToast("Kies medewerker, begin- en einddatum.",true);return}
+  if(endDate.value<startDate.value){showToast("De einddatum ligt vóór de begindatum.",true);return}
+  const item={
+    id:editingId||((crypto.randomUUID&&crypto.randomUUID())||Date.now().toString(36)),
+    employeeId:e.id,employeeNumber:e.personeelsnr,employeeName:fullName(e),rayonleidster:e.rayonleidster||"",
+    reason:reason.value,startDate:startDate.value,endDate:endDate.value,note:note.value.trim(),
+    services:serviceRows,updated:new Date().toISOString()
+  };
+  let list=records();
+  list=editingId?list.map(x=>x.id===editingId?item:x):[item,...list];
+  setRecords(list);clearForm();showToast("Afwezigheid opgeslagen.");
+}
+function clearForm(){
+  editingId=null;employee.value="";reason.value="Ziek";startDate.value=isoToday();endDate.value=isoToday();note.value="";
+  serviceRows=[];updateEmployeeInfo();renderServices();
+}
+function editRecord(id){
+  const x=records().find(r=>r.id===id);if(!x)return;
+  editingId=id;employee.value=x.employeeId;reason.value=x.reason;startDate.value=x.startDate;endDate.value=x.endDate;note.value=x.note||"";
+  serviceRows=x.services||[];updateEmployeeInfo();renderServices();scrollTo({top:0,behavior:"smooth"});
+}
+function deleteRecord(id){if(confirm("Deze afwezigheid verwijderen?")){setRecords(records().filter(x=>x.id!==id));showToast("Verwijderd.")}}
+function replacementStatus(x){
+  const needed=(x.services||[]).filter(s=>s.replacementNeeded);
+  if(!needed.length)return"Vervallen";
+  if(needed.every(s=>s.status==="Geregeld"))return"Geregeld";
+  return"Open";
+}
+function render(){
+  const today=isoToday(),q=search.value.toLowerCase();
+  let list=records().filter(x=>{
+    const hay=[x.employeeName,x.reason,x.rayonleidster,...(x.services||[]).map(s=>s.project)].join(" ").toLowerCase();
+    const st=replacementStatus(x);
+    const period= x.endDate<today?"past":x.startDate>today?"upcoming":"current";
+    return (!q||hay.includes(q))&&(!statusFilter.value||st===statusFilter.value)&&(!periodFilter.value||period===periodFilter.value);
+  });
+  const all=records(),allServices=all.flatMap(x=>x.services||[]);
+  kpiOpen.textContent=allServices.filter(s=>s.replacementNeeded&&s.status==="Open").length;
+  kpiNow.textContent=all.filter(x=>x.startDate<=today&&x.endDate>=today).length;
+  const next=new Date();next.setDate(next.getDate()+14);const nextIso=next.toISOString().slice(0,10);
+  kpiUpcoming.textContent=all.filter(x=>x.startDate>today&&x.startDate<=nextIso).length;
+  kpiArranged.textContent=allServices.filter(s=>s.replacementNeeded&&s.status==="Geregeld").length;
+  if(!list.length){overview.innerHTML='<div class="empty">Geen registraties gevonden.</div>';return}
+  overview.innerHTML=`<table><thead><tr><th>Medewerker</th><th>Periode</th><th>Reden</th><th>Diensten</th><th>Vervanging</th><th>Acties</th></tr></thead><tbody>${list.map(x=>{
+    const st=replacementStatus(x),open=(x.services||[]).filter(s=>s.replacementNeeded&&s.status==="Open").length;
+    return`<tr><td><strong>${esc(x.employeeName)}</strong><div class="small">${esc(x.rayonleidster)}</div></td>
+    <td>${dateNl(x.startDate)} t/m ${dateNl(x.endDate)}</td><td>${esc(x.reason)}</td>
+    <td>${(x.services||[]).length}</td><td><span class="badge ${st==="Open"?"open":st==="Geregeld"?"done":"cancel"}">${st}</span>${open?`<div class="small">${open} open</div>`:""}</td>
+    <td><button class="secondary" onclick="editRecord('${x.id}')">Bewerk</button> <button class="danger" onclick="deleteRecord('${x.id}')">Verwijder</button></td></tr>`;
+  }).join("")}</tbody></table>`;
+}
+
+async function saveToDrive(show=true){
+  if(!configuredDrive()){setSync("Alleen lokaal opgeslagen","error");if(show)showToast("Drive-koppeling volgt in de volgende stap.",true);return}
+  try{setSync("Opslaan naar Drive…","busy");await fetch(ABSENCE_URL,{method:"POST",body:JSON.stringify(records())});setSync("Drive bijgewerkt");if(show)showToast("Opgeslagen naar Drive.")}
+  catch(e){setSync("Drive opslaan mislukt","error");if(show)showToast("Drive opslaan mislukt.",true)}
+}
+async function loadFromDrive(auto=true){
+  if(!configuredDrive()){setSync("Lokaal gebruik");return}
+  try{setSync("Laden uit Drive…","busy");const r=await fetch(ABSENCE_URL+"?t="+Date.now());const data=await r.json();if(Array.isArray(data))setRecords(data,false);setSync("Drive geladen");if(!auto)showToast("Geladen uit Drive.")}
+  catch(e){setSync("Drive laden mislukt","error");if(!auto)showToast("Drive laden mislukt.",true)}
+}
+
+employee.addEventListener("change",()=>{updateEmployeeInfo();generateServices()});
+startDate.addEventListener("change",generateServices);endDate.addEventListener("change",generateServices);
+search.addEventListener("input",render);statusFilter.addEventListener("change",render);periodFilter.addEventListener("change",render);
+clearForm();loadSources();loadFromDrive(true);render();
+</script>
+</body>
+</html>
