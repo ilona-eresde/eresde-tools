@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eresde Personeelsbeheer</title>
+<style>
+:root{--green:#91b600;--dark:#1f2937;--line:#d9dee7;--bg:#f4f6f8;--soft:#eef3d8;--danger:#fee2e2;--dangerText:#991b1b;--ok:#dcfce7;--okText:#166534;--warn:#fff7ed;--warnText:#9a3412}
+*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:var(--dark)}
+.topbar{padding:12px 15px;background:var(--green)}.topbar a{font-weight:bold;text-decoration:none;color:white}
+header{background:var(--green);color:white;padding:18px 16px;font-size:23px;font-weight:900}
+main{max-width:1080px;margin:auto;padding:14px}.card{background:white;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+label{font-size:14px;font-weight:900;margin-bottom:5px;display:block}input,select,textarea{width:100%;font-size:18px;padding:12px;border:1px solid var(--line);border-radius:11px;background:white}
+textarea{min-height:70px}button{font-size:18px;padding:13px 16px;border:0;border-radius:12px;font-weight:900;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}
+.primary{background:var(--green);color:white}.secondary{background:#e5e7eb;color:#111827}.danger{background:var(--danger);color:var(--dangerText)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}.small{font-size:13px;color:#6b7280;line-height:1.35}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}.kpi{background:var(--soft);border-radius:13px;padding:11px;font-weight:900;text-align:center}.kpi .num{font-size:28px;color:var(--green)}
+.badge{display:inline-block;background:var(--soft);padding:5px 9px;border-radius:999px;font-weight:900;font-size:13px}.badge.inactive{background:#e5e7eb;color:#4b5563}
+table{width:100%;border-collapse:collapse;margin-top:12px;background:white}th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;font-size:14px;vertical-align:top}th{background:#f9fafb;font-weight:900}
+.empty{padding:20px;text-align:center;color:#6b7280;font-weight:700}.rowActions button{font-size:13px;padding:7px 9px;margin:2px}
+.editBanner{display:none;background:var(--warn);color:var(--warnText);font-weight:900;border-radius:12px;padding:10px;margin-bottom:12px}
+.rosterRow{display:grid;grid-template-columns:1.1fr 2fr 1fr 1fr auto;gap:8px;align-items:end;margin:8px 0;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fafafa}
+.rosterRow button{font-size:14px;padding:10px}.required{color:#b91c1c}details summary{cursor:pointer;font-weight:900;font-size:18px}
+.syncPill{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:7px 11px;background:#eef3d8;font-weight:800;font-size:13px}
+.syncDot{width:9px;height:9px;border-radius:50%;background:#91b600}.syncDot.busy{background:#f59e0b}.syncDot.error{background:#dc2626}
+.projectInfo{margin-top:7px;padding:8px 10px;border-radius:10px;background:#f8fafc;border:1px solid var(--line)}
+.toast{position:fixed;right:18px;bottom:18px;z-index:1200;max-width:360px;padding:13px 16px;border-radius:12px;background:#1f2937;color:white;font-weight:800;box-shadow:0 10px 30px rgba(0,0,0,.25);opacity:0;transform:translateY(20px);pointer-events:none;transition:.2s}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.error{background:#991b1b}
+.cardHero{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:15px}
+.avatar{width:68px;height:68px;border-radius:50%;background:var(--soft);display:grid;place-items:center;font-size:28px;font-weight:900;color:#587100;flex:0 0 auto}
+.heroText{flex:1}.heroText h2{margin:0 0 4px}.heroText p{margin:0;color:#6b7280;font-weight:700}
+.projectChips{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.projectChip{background:#eef3d8;border-radius:999px;padding:6px 10px;font-size:13px;font-weight:900}
+.clickableName{background:none;border:0;padding:0;font:inherit;font-weight:900;color:#1f2937;text-decoration:underline;text-decoration-color:#cbd5e1;text-underline-offset:3px;cursor:pointer}
+@media print{body *{visibility:hidden}.modal,.modal *{visibility:visible}.modal{position:absolute;inset:0;background:white;padding:0}.modalContent{box-shadow:none;margin:0;max-width:none}.modalClose,.modalBody .actions{display:none}}
+
+
+.modal{display:none;position:fixed;inset:0;background:rgba(17,24,39,.55);z-index:999;padding:20px;overflow:auto}
+.modal.open{display:block}
+.modalContent{max-width:820px;margin:30px auto;background:white;border-radius:18px;box-shadow:0 18px 50px rgba(0,0,0,.25);overflow:hidden}
+.modalHeader{background:var(--green);color:white;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.modalHeader h2{margin:0;font-size:23px}
+.modalClose{background:rgba(255,255,255,.2);color:white;font-size:24px;padding:6px 12px}
+.modalBody{padding:18px}
+.detailGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.detailBox{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fafafa}
+.detailBox strong{display:block;font-size:12px;color:#6b7280;margin-bottom:4px}
+.detailRoster{width:100%;border-collapse:collapse;margin-top:8px}
+.detailRoster th,.detailRoster td{padding:8px;border-bottom:1px solid var(--line);font-size:14px}
+@media(max-width:760px){.detailGrid{grid-template-columns:1fr}.modal{padding:8px}.modalContent{margin:8px auto}.modalHeader{align-items:flex-start}}
+
+@media(max-width:760px){.grid,.grid3,.summary,.rosterRow{grid-template-columns:1fr}button{width:100%}table,thead,tbody,tr,td,th{display:block}thead{display:none}tr{border:1px solid var(--line);border-radius:12px;margin:10px 0;padding:8px;background:white}td{border:0;padding:6px 4px}td:before{content:attr(data-label);display:block;font-weight:900;font-size:12px;color:#6b7280}.rowActions button{width:auto}}
+
+.projectPicker{border:1px solid var(--line);border-radius:12px;background:#fafafa;padding:10px;max-height:240px;overflow:auto}
+.projectPickerGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.projectOption{display:flex;gap:8px;align-items:flex-start;padding:8px;border-radius:9px;background:white;border:1px solid #edf0f4;font-weight:700}
+.projectOption input{width:auto;margin-top:2px}
+.tabBar{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:12px}
+.tabBtn{font-size:14px;padding:9px 12px;background:#e5e7eb;color:#111827}
+.tabBtn.active{background:var(--green);color:white}
+.tabPanel{display:none}.tabPanel.active{display:block}
+.pdfNote{font-size:12px;color:#6b7280;margin-top:6px}
+@media(max-width:760px){.projectPickerGrid{grid-template-columns:1fr}.tabBtn{width:auto}}
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+<div class="topbar"><a href="index.html">← Terug naar Dashboard</a></div>
+<header>👥 Personeelsbeheer <span style="font-size:14px;font-weight:700;opacity:.9">v4 · Drive + PDF</span></header>
+<main>
+<section class="card">
+<div id="editBanner" class="editBanner">Je bewerkt nu een bestaande medewerker.</div>
+<h2 style="margin:0 0 8px">➕ Medewerker toevoegen / wijzigen</h2>
+<p class="small">Alleen personeelsnummer, voornaam, achternaam en rayonleidster zijn verplicht. Het rooster mag leeg blijven.</p>
+<div class="grid">
+<div><label>Personeelsnummer <span class="required">*</span></label><input id="personeelsnr" placeholder="Bijv. 1024"></div>
+<div><label>Rayonleidster <span class="required">*</span></label><select id="rayonleidster"><option value="">Kies rayonleidster...</option><option>Ilona</option><option>Wieteke</option><option>Jan</option><option>Katinka</option><option>Harmen</option><option>Anders</option></select></div>
+<div><label>Voornaam <span class="required">*</span></label><input id="voornaam"></div>
+<div><label>Achternaam <span class="required">*</span></label><input id="achternaam"></div>
+<div><label>Telefoon</label><input id="telefoon" type="tel" placeholder="Optioneel"></div>
+<div><label>E-mail</label><input id="email" type="email" placeholder="Optioneel"></div>
+<div><label>Functie</label><input id="functie" placeholder="Optioneel"></div>
+<div><label>Contracturen per week</label><input id="contracturen" type="number" min="0" step="0.25" placeholder="Optioneel"></div>
+<div><label>Startdatum</label><input id="startdatum" type="date"></div>
+<div><label>Status</label><select id="status"><option value="actief">Actief</option><option value="uit_dienst">Uit dienst</option></select></div>
+</div>
+<label style="margin-top:12px">Praktische opmerking</label><textarea id="opmerking" placeholder="Optioneel"></textarea>
+
+<details class="card" style="box-shadow:none;border:1px solid var(--line);margin-top:14px">
+<summary>🏢 Gekoppelde projecten (optioneel)</summary>
+<p class="small">Selecteer de projecten waar deze medewerker vast aan gekoppeld is. Dit staat los van het rooster.</p>
+<div id="projectPicker" class="projectPicker"><div class="small">Projectlocaties worden geladen…</div></div>
+</details>
+
+<details class="card" style="box-shadow:none;border:1px solid var(--line);margin-top:14px">
+<summary>📅 Vast rooster (optioneel)</summary>
+<p class="small">Voeg nul, één of meerdere roosterregels toe.</p>
+<div id="rosterRows"></div>
+<button class="secondary" type="button" onclick="addRosterRow()">➕ Roosterregel toevoegen</button>
+</details>
+<div class="actions"><button class="primary" id="saveBtn" onclick="saveEmployee()">Medewerker opslaan</button><button class="secondary" onclick="clearForm()">Velden leegmaken</button></div>
+<div class="actions" style="align-items:center">
+      <span class="syncPill"><span id="syncDot" class="syncDot"></span><span id="syncStatus">Drive-sync controleren…</span></span>
+      <span class="small" id="projectStatus">Projectlocaties laden…</span>
+    </div>
+</section>
+
+<section class="card"><h2 style="margin:0 0 8px">Dashboard medewerkers</h2><div class="summary">
+<div class="kpi"><div class="num" id="kpiTotal">0</div>medewerkers</div>
+<div class="kpi"><div class="num" id="kpiActive">0</div>actief</div>
+<div class="kpi"><div class="num" id="kpiNoRoster">0</div>zonder rooster</div>
+<div class="kpi"><div class="num" id="kpiHours">0</div>contracturen</div>
+</div></section>
+
+<section class="card"><h2 style="margin:0 0 8px">Medewerkerslijst</h2>
+<div class="grid3">
+<div><label>Zoeken</label><input id="zoek" oninput="render()" placeholder="Naam, personeelsnr, telefoon"></div>
+<div><label>Filter rayonleidster</label><select id="filterRayon" onchange="render()"><option value="">Alle rayonleidsters</option><option>Ilona</option><option>Wieteke</option><option>Jan</option><option>Katinka</option><option>Harmen</option><option>Anders</option></select></div>
+<div><label>Status</label><select id="filterStatus" onchange="render()"><option value="">Alles</option><option value="actief">Actief</option><option value="uit_dienst">Uit dienst</option></select></div>
+</div>
+<div class="actions">
+<button class="primary" onclick="document.getElementById('importFile').click()">📥 Import medewerkers.json</button>
+<input id="importFile" type="file" accept=".json,application/json" style="display:none" onchange="importEmployeesJson(event)">
+<button class="secondary" onclick="exportJson()">Export medewerkers.json</button>
+<button class="secondary" id="loadDriveBtn" onclick="loadEmployeesFromDrive(false)" disabled>☁️ Laden uit Drive</button>
+<button class="secondary" id="saveDriveBtn" onclick="saveEmployeesToDrive(true)" disabled>☁️ Opslaan naar Drive</button>
+<button class="danger" onclick="deleteAll()">Alles wissen</button>
+</div><div id="tableWrap"></div></section>
+</main>
+
+<div id="employeeModal" class="modal noPrint" onclick="modalBackdropClose(event)">
+  <div class="modalContent">
+    <div class="modalHeader">
+      <h2 id="modalTitle">Medewerkerkaart</h2>
+      <button class="modalClose" type="button" onclick="closeEmployeeCard()">×</button>
+    </div>
+    <div class="modalBody" id="modalBody"></div>
+  </div>
+</div>
+
+<datalist id="projectsList"></datalist>
+<div id="toast" class="toast"></div>
+<script>
+const KEY="eresde_medewerkers_v1";
+const PROJECTDATA_WEBAPP_URL="https://script.google.com/macros/s/AKfycbysDHylCUtXBOO3P2ftygHcCE22UQXO822UYPWm33AHQD-wEH_54FpDu_DBN7Nwz29n/exec";
+const EMPLOYEEDATA_WEBAPP_URL="https://script.google.com/macros/s/AKfycbwFp7kSF751T9ehWQUKVMwrldX90PTXDInxmC9FWSLARLUbKx5X_RaeNFHDmwnJyMje/exec";
+let editingId=null;
+let projectNames=[];
+let saveTimer=null;
+function showToast(message,isError=false){
+  toast.textContent=message; toast.className="toast show"+(isError?" error":"");
+  clearTimeout(showToast.timer); showToast.timer=setTimeout(()=>toast.className="toast",2600);
+}
+function setSyncState(message,state="ok"){
+  syncStatus.textContent=message;
+  syncDot.className="syncDot"+(state==="busy"?" busy":state==="error"?" error":"");
+}
+function initials(x){
+  return [x.voornaam,x.achternaam].filter(Boolean).map(v=>v.trim()[0]||"").join("").slice(0,2).toUpperCase()||"?";
+}
+function uniqueProjects(x){
+  const explicit=Array.isArray(x.projecten)?x.projecten:[];
+  const roster=(x.rooster||[]).map(r=>String(r.project||"").trim()).filter(Boolean);
+  return [...new Set([...explicit,...roster].map(v=>String(v).trim()).filter(Boolean))];
+}
+function selectedProjects(){
+  return [...document.querySelectorAll(".projectCheck:checked")].map(x=>x.value);
+}
+function renderProjectPicker(selected=[]){
+  if(!projectNames.length){
+    projectPicker.innerHTML='<div class="small">Geen projectlocaties beschikbaar. Roosterlocaties kunnen wel handmatig worden ingevuld.</div>';
+    return;
+  }
+  const chosen=new Set((selected||[]).map(String));
+  projectPicker.innerHTML=`<div class="projectPickerGrid">${projectNames.map(p=>`
+    <label class="projectOption"><input type="checkbox" class="projectCheck" value="${esc(p)}" ${chosen.has(p)?"checked":""}><span>${esc(p)}</span></label>
+  `).join("")}</div>`;
+}
+function queueDriveSave(){
+  clearTimeout(saveTimer);
+  setSyncState("Wijziging lokaal opgeslagen; Drive volgt…","busy");
+  saveTimer=setTimeout(()=>saveEmployeesToDrive(false),500);
+}
+function esc(s){return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function employees(){try{return JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){return[]}}
+function setEmployees(list,sync=true){localStorage.setItem(KEY,JSON.stringify(list));render();if(sync&&EMPLOYEEDATA_WEBAPP_URL)queueDriveSave()}
+function employeeName(x){return [x.voornaam,x.achternaam].filter(Boolean).join(" ").trim()}
+function addRosterRow(data={}){
+ const row=document.createElement("div");row.className="rosterRow";
+ row.innerHTML=`<div><label>Dag</label><select class="rDag"><option value="">Kies dag...</option>${["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag","Zondag"].map(d=>`<option ${data.dag===d?"selected":""}>${d}</option>`).join("")}</select></div>
+ <div><label>Project</label><input class="rProject" list="projectsList" value="${esc(data.project||"")}" placeholder="Typ om een project te zoeken" autocomplete="off"><div class="small">Kies bij voorkeur een locatie uit Projectbeheer.</div></div>
+ <div><label>Begin</label><input class="rBegin" type="time" value="${esc(data.begin||"")}"></div>
+ <div><label>Eind</label><input class="rEind" type="time" value="${esc(data.eind||"")}"></div>
+ <div><button class="danger" type="button" onclick="this.closest('.rosterRow').remove()">Verwijder</button></div>`;
+ rosterRows.appendChild(row);
+}
+function collectRoster(){return [...document.querySelectorAll(".rosterRow")].map(r=>({dag:r.querySelector(".rDag").value,project:r.querySelector(".rProject").value.trim(),begin:r.querySelector(".rBegin").value,eind:r.querySelector(".rEind").value})).filter(r=>r.dag||r.project||r.begin||r.eind)}
+function saveEmployee(){
+ if(!personeelsnr.value.trim()||!voornaam.value.trim()||!achternaam.value.trim()||!rayonleidster.value){alert("Vul personeelsnummer, voornaam, achternaam en rayonleidster in.");return}
+ const nr=personeelsnr.value.trim();
+ const item={id:editingId||Date.now().toString(36)+Math.random().toString(16).slice(2),personeelsnr:nr,voornaam:voornaam.value.trim(),achternaam:achternaam.value.trim(),rayonleidster:rayonleidster.value,telefoon:telefoon.value.trim(),email:email.value.trim(),functie:functie.value.trim(),contracturen:contracturen.value.trim(),startdatum:startdatum.value,status:status.value,opmerking:opmerking.value.trim(),rooster:collectRoster(),updated:new Date().toISOString()};
+ let list=employees();if(list.some(x=>x.id!==editingId&&String(x.personeelsnr).trim()===nr)){alert("Dit personeelsnummer bestaat al.");return}
+ const wasEditing=Boolean(editingId);if(editingId)list=list.map(x=>x.id===editingId?{...x,...item}:x);else list.unshift(item);setEmployees(list);clearForm();showToast(wasEditing?"Medewerker bijgewerkt.":"Medewerker opgeslagen.");
+}
+function clearForm(){editingId=null;editBanner.style.display="none";saveBtn.textContent="Medewerker opslaan";personeelsnr.value="";voornaam.value="";achternaam.value="";rayonleidster.value="";telefoon.value="";email.value="";functie.value="";contracturen.value="";startdatum.value="";status.value="actief";opmerking.value="";rosterRows.innerHTML=""}
+function editEmployee(id){const x=employees().find(e=>e.id===id);if(!x)return;editingId=id;personeelsnr.value=x.personeelsnr||"";voornaam.value=x.voornaam||"";achternaam.value=x.achternaam||"";rayonleidster.value=x.rayonleidster||"";telefoon.value=x.telefoon||"";email.value=x.email||"";functie.value=x.functie||"";contracturen.value=x.contracturen||"";startdatum.value=x.startdatum||"";status.value=x.status||"actief";opmerking.value=x.opmerking||"";rosterRows.innerHTML="";(x.rooster||[]).forEach(addRosterRow);renderProjectPicker(x.projecten||[]);editBanner.style.display="block";saveBtn.textContent="Wijziging opslaan";window.scrollTo({top:0,behavior:"smooth"})}
+function deleteEmployee(id){const x=employees().find(e=>e.id===id);if(x&&confirm(`${employeeName(x)} verwijderen?`)){setEmployees(employees().filter(e=>e.id!==id));showToast("Medewerker verwijderd.")}}
+function deleteAll(){if(confirm("Alle medewerkers wissen? Dit wordt ook naar Drive gesynchroniseerd.")){setEmployees([]);showToast("Alle medewerkers gewist.")}}
+function updateKpis(){
+  const l=employees();
+  kpiTotal.textContent=l.length;
+  kpiActive.textContent=l.filter(x=>(x.status||"actief")==="actief").length;
+  kpiNoRoster.textContent=l.filter(x=>!Array.isArray(x.rooster)||!x.rooster.length).length;
+  const hours=l.filter(x=>(x.status||"actief")==="actief").reduce((s,x)=>s+(parseFloat(String(x.contracturen||"").replace(",","."))||0),0);
+  kpiHours.textContent=Number.isInteger(hours)?hours:hours.toFixed(2).replace(".",",");
+}
+function filteredEmployees(){const q=(zoek.value||"").toLowerCase(),fr=filterRayon.value,fs=filterStatus.value;let l=[...employees()].sort((a,b)=>employeeName(a).localeCompare(employeeName(b),"nl"));if(fr)l=l.filter(x=>x.rayonleidster===fr);if(fs)l=l.filter(x=>(x.status||"actief")===fs);if(q)l=l.filter(x=>[x.personeelsnr,employeeName(x),x.telefoon,x.email,x.functie,x.rayonleidster,...(x.rooster||[]).map(r=>r.dag+" "+r.project)].join(" ").toLowerCase().includes(q));return l}
+function rosterSummary(x){const r=x.rooster||[];if(!r.length)return"Geen rooster";return r.slice(0,3).map(v=>`${esc(v.dag||"")} · ${esc(v.project||"")}${v.begin||v.eind?` (${esc(v.begin||"?")}–${esc(v.eind||"?")})`:""}`).join("<br>")+(r.length>3?`<br><span class="small">+ ${r.length-3} extra regel(s)</span>`:"")}
+
+function openEmployeeCard(id){
+  const x=employees().find(e=>e.id===id); if(!x)return;
+  const projects=uniqueProjects(x);
+  const explicit=Array.isArray(x.projecten)?x.projecten:[];
+  const roster=x.rooster||[];
+  modalTitle.textContent="Medewerkerkaart";
+  modalBody.innerHTML=`
+    <div class="cardHero">
+      <div class="avatar">${esc(initials(x))}</div>
+      <div class="heroText">
+        <h2>${esc(employeeName(x))}</h2>
+        <p>${esc(x.personeelsnr)} · ${esc(x.rayonleidster)} · ${(x.status||"actief")==="actief"?"Actief":"Uit dienst"}</p>
+        <div class="projectChips">${projects.length?projects.map(p=>`<span class="projectChip">${esc(p)}</span>`).join(""):'<span class="small">Geen projecten gekoppeld</span>'}</div>
+      </div>
+    </div>
+    <div class="tabBar">
+      <button class="tabBtn active" onclick="showEmployeeTab(this,'tabGeneral')">Algemeen</button>
+      <button class="tabBtn" onclick="showEmployeeTab(this,'tabRoster')">Rooster</button>
+      <button class="tabBtn" onclick="showEmployeeTab(this,'tabProjects')">Projecten</button>
+      <button class="tabBtn" onclick="showEmployeeTab(this,'tabNotes')">Notities</button>
+    </div>
+    <div id="tabGeneral" class="tabPanel active">
+      <div class="detailGrid">
+        <div class="detailBox"><strong>Personeelsnummer</strong>${esc(x.personeelsnr)}</div>
+        <div class="detailBox"><strong>Rayonleidster</strong>${esc(x.rayonleidster)}</div>
+        <div class="detailBox"><strong>Telefoon</strong>${esc(x.telefoon)||"Niet ingevuld"}</div>
+        <div class="detailBox"><strong>E-mail</strong>${esc(x.email)||"Niet ingevuld"}</div>
+        <div class="detailBox"><strong>Functie</strong>${esc(x.functie)||"Niet ingevuld"}</div>
+        <div class="detailBox"><strong>Contracturen</strong>${x.contracturen?esc(x.contracturen)+" uur per week":"Niet ingevuld"}</div>
+        <div class="detailBox"><strong>Startdatum</strong>${x.startdatum?esc(new Date(x.startdatum+"T00:00:00").toLocaleDateString("nl-NL")):"Niet ingevuld"}</div>
+        <div class="detailBox"><strong>Status</strong>${(x.status||"actief")==="actief"?"Actief":"Uit dienst"}</div>
+      </div>
+    </div>
+    <div id="tabRoster" class="tabPanel">
+      ${roster.length?`<table class="detailRoster"><thead><tr><th>Dag</th><th>Project</th><th>Begin</th><th>Eind</th></tr></thead><tbody>
+        ${roster.map(r=>`<tr><td>${esc(r.dag)||"—"}</td><td>${esc(r.project)||"—"}</td><td>${esc(r.begin)||"—"}</td><td>${esc(r.eind)||"—"}</td></tr>`).join("")}
+      </tbody></table>`:'<div class="empty">Geen vast rooster ingevuld.</div>'}
+    </div>
+    <div id="tabProjects" class="tabPanel">
+      ${explicit.length?`<div class="projectChips">${explicit.map(p=>`<span class="projectChip">${esc(p)}</span>`).join("")}</div>`:'<div class="empty">Geen vaste projectkoppelingen geselecteerd.</div>'}
+      ${projects.length>explicit.length?'<p class="small">Projecten uit roosterregels worden daarnaast automatisch op de kaart getoond.</p>':''}
+    </div>
+    <div id="tabNotes" class="tabPanel">
+      <div class="detailBox"><strong>Praktische opmerking</strong>${esc(x.opmerking)||"Geen opmerking"}</div>
+    </div>
+    <div class="actions">
+      <button class="primary" onclick="closeEmployeeCard();editEmployee('${x.id}')">Bewerk medewerker</button>
+      <button class="secondary" onclick="exportEmployeePdf('${x.id}')">📄 Exporteer PDF</button>
+    </div>
+    <div class="pdfNote">De PDF wordt compact op één A4 opgebouwd. Bij een uitzonderlijk lang rooster kan een tweede pagina ontstaan.</div>`;
+  employeeModal.classList.add("open");
+  document.body.style.overflow="hidden";
+}
+function showEmployeeTab(btn,id){
+  btn.closest(".modalBody").querySelectorAll(".tabBtn").forEach(x=>x.classList.remove("active"));
+  btn.closest(".modalBody").querySelectorAll(".tabPanel").forEach(x=>x.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById(id).classList.add("active");
+}
+function safeFileName(value){
+  return String(value||"medewerker").replace(/[\\/:*?"<>|]+/g,"-").replace(/\s+/g," ").trim();
+}
+function exportEmployeePdf(id){
+  const x=employees().find(e=>e.id===id); if(!x)return;
+  if(!window.jspdf || !window.jspdf.jsPDF){
+    showToast("PDF-bibliotheek kon niet worden geladen. Controleer de internetverbinding.",true);
+    return;
+  }
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+  const green=[145,182,0], dark=[31,41,55], muted=[107,114,128];
+  const projects=uniqueProjects(x);
+  const roster=x.rooster||[];
+  doc.setFillColor(...green); doc.rect(0,0,210,28,"F");
+  doc.setTextColor(255,255,255); doc.setFont("helvetica","bold"); doc.setFontSize(19);
+  doc.text("Eresde Personeelskaart",14,12);
+  doc.setFontSize(10); doc.setFont("helvetica","normal");
+  doc.text(`Aangemaakt: ${new Date().toLocaleDateString("nl-NL")}`,14,20);
+
+  doc.setTextColor(...dark); doc.setFont("helvetica","bold"); doc.setFontSize(17);
+  doc.text(employeeName(x),14,40);
+  doc.setFontSize(10); doc.setFont("helvetica","normal"); doc.setTextColor(...muted);
+  doc.text(`Personeelsnummer ${x.personeelsnr}  |  Rayon ${x.rayonleidster}  |  ${(x.status||"actief")==="actief"?"Actief":"Uit dienst"}`,14,47);
+
+  const info=[
+    ["Functie",x.functie||"Niet ingevuld","Contracturen",x.contracturen?`${x.contracturen} uur per week`:"Niet ingevuld"],
+    ["Telefoon",x.telefoon||"Niet ingevuld","E-mail",x.email||"Niet ingevuld"],
+    ["Startdatum",x.startdatum?new Date(x.startdatum+"T00:00:00").toLocaleDateString("nl-NL"):"Niet ingevuld","Rayonleidster",x.rayonleidster||"Niet ingevuld"]
+  ];
+  doc.autoTable({
+    startY:53, body:info, theme:"grid",
+    styles:{fontSize:9,cellPadding:2.5,textColor:dark,lineColor:[217,222,231]},
+    columnStyles:{0:{fontStyle:"bold",fillColor:[238,243,216],cellWidth:27},1:{cellWidth:58},2:{fontStyle:"bold",fillColor:[238,243,216],cellWidth:29},3:{cellWidth:72}},
+    margin:{left:14,right:14}
+  });
+
+  let y=doc.lastAutoTable.finalY+7;
+  doc.setTextColor(...dark); doc.setFont("helvetica","bold"); doc.setFontSize(11);
+  doc.text("Projecten",14,y); y+=3;
+  doc.autoTable({
+    startY:y,
+    body: projects.length?projects.map(p=>[p]):[["Geen projecten gekoppeld"]],
+    theme:"plain",
+    styles:{fontSize:9,cellPadding:1.7,textColor:dark},
+    bodyStyles:{fillColor:[248,250,252]},
+    margin:{left:14,right:14}
+  });
+  y=doc.lastAutoTable.finalY+7;
+
+  doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.text("Vast rooster",14,y);
+  doc.autoTable({
+    startY:y+3,
+    head:[["Dag","Project","Begin","Eind"]],
+    body:roster.length?roster.map(r=>[r.dag||"—",r.project||"—",r.begin||"—",r.eind||"—"]):[["—","Geen vast rooster","—","—"]],
+    theme:"grid",
+    headStyles:{fillColor:green,textColor:[255,255,255],fontStyle:"bold"},
+    styles:{fontSize:8.5,cellPadding:2,lineColor:[217,222,231]},
+    columnStyles:{0:{cellWidth:28},1:{cellWidth:95},2:{cellWidth:25},3:{cellWidth:25}},
+    margin:{left:14,right:14}
+  });
+
+  y=doc.lastAutoTable.finalY+7;
+  doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.text("Praktische opmerking",14,y);
+  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(...dark);
+  const note=doc.splitTextToSize(x.opmerking||"Geen opmerking",182);
+  doc.text(note,14,y+5);
+
+  doc.setDrawColor(...green); doc.line(14,287,196,287);
+  doc.setFontSize(8); doc.setTextColor(...muted);
+  doc.text("Eresde Manager · Personeelsbeheer",14,292);
+  doc.text(`Pagina 1`,196,292,{align:"right"});
+
+  doc.save(`${safeFileName(x.personeelsnr+" - "+employeeName(x))}.pdf`);
+  showToast("PDF is aangemaakt.");
+}
+function closeEmployeeCard(){
+  employeeModal.classList.remove("open");
+  document.body.style.overflow="";
+}
+function modalBackdropClose(event){
+  if(event.target===employeeModal)closeEmployeeCard();
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeEmployeeCard()});
+
+function render(){
+  updateKpis();
+  const l=filteredEmployees();
+  if(!l.length){tableWrap.innerHTML='<div class="empty">Geen medewerkers gevonden.</div>';return}
+  tableWrap.innerHTML=`<table><thead><tr><th>Personeelsnr</th><th>Naam</th><th>Rayonleidster</th><th>Contact</th><th>Functie / uren</th><th>Rooster</th><th>Status</th><th>Actie</th></tr></thead><tbody>${l.map(x=>`<tr>
+    <td data-label="Personeelsnr"><strong>${esc(x.personeelsnr)}</strong></td>
+    <td data-label="Naam"><button class="clickableName" onclick="openEmployeeCard('${x.id}')">${esc(employeeName(x))}</button></td>
+    <td data-label="Rayonleidster"><span class="badge">${esc(x.rayonleidster)}</span></td>
+    <td data-label="Contact">${esc(x.telefoon)}${x.telefoon&&x.email?"<br>":""}${esc(x.email)}</td>
+    <td data-label="Functie / uren">${esc(x.functie)}${x.functie&&x.contracturen?"<br>":""}${x.contracturen?esc(x.contracturen)+" uur":""}</td>
+    <td data-label="Rooster">${rosterSummary(x)}</td>
+    <td data-label="Status"><span class="badge ${(x.status||"actief")==="uit_dienst"?"inactive":""}">${(x.status||"actief")==="actief"?"Actief":"Uit dienst"}</span></td>
+    <td data-label="Actie" class="rowActions">
+      <button class="primary" onclick="openEmployeeCard('${x.id}')">Kaart</button>
+      <button class="secondary" onclick="editEmployee('${x.id}')">Bewerk</button>
+      <button class="danger" onclick="deleteEmployee('${x.id}')">Verwijder</button>
+    </td></tr>`).join("")}</tbody></table>`;
+}
+function cleanEmployeesForExport(){return employees().map(x=>({id:x.id,personeelsnr:x.personeelsnr,voornaam:x.voornaam,achternaam:x.achternaam,rayonleidster:x.rayonleidster,telefoon:x.telefoon,email:x.email,functie:x.functie,contracturen:x.contracturen,startdatum:x.startdatum,status:x.status,opmerking:x.opmerking,projecten:x.projecten||[],rooster:x.rooster||[],updated:x.updated||new Date().toISOString()}))}
+function downloadText(filename,text,type){const b=new Blob([text],{type}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=filename;a.click();URL.revokeObjectURL(u)}
+function exportJson(){downloadText("medewerkers.json",JSON.stringify(cleanEmployeesForExport(),null,2),"application/json;charset=utf-8")}
+function normalizeEmployee(x){return{id:x.id||Date.now().toString(36)+Math.random().toString(16).slice(2),personeelsnr:String(x.personeelsnr||x.personeelsnummer||"").trim(),voornaam:String(x.voornaam||"").trim(),achternaam:String(x.achternaam||"").trim(),rayonleidster:String(x.rayonleidster||x.rayon||"").trim(),telefoon:String(x.telefoon||"").trim(),email:String(x.email||"").trim(),functie:String(x.functie||"").trim(),contracturen:String(x.contracturen||"").trim(),startdatum:String(x.startdatum||""),status:x.status||"actief",opmerking:String(x.opmerking||""),projecten:Array.isArray(x.projecten)?x.projecten:[],rooster:Array.isArray(x.rooster)?x.rooster:[],updated:new Date().toISOString()}}
+function importEmployeesJson(event){const f=event.target.files&&event.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!Array.isArray(d))throw new Error("Geen medewerkerslijst.");const imp=d.map(normalizeEmployee).filter(x=>x.personeelsnr&&x.voornaam&&x.achternaam&&x.rayonleidster),m=new Map(employees().map(x=>[String(x.personeelsnr),x]));imp.forEach(x=>m.set(String(x.personeelsnr),{...(m.get(String(x.personeelsnr))||{}),...x}));setEmployees([...m.values()]);showToast(`${imp.length} medewerker(s) geïmporteerd.`)}catch(e){showToast("Import mislukt: "+e.message,true)}finally{event.target.value=""}};r.readAsText(f,"utf-8")}
+async function loadProjects(){
+  try{
+    projectStatus.textContent="Projectlocaties laden…";
+    const res=await fetch(PROJECTDATA_WEBAPP_URL+"?t="+Date.now());
+    const d=await res.json();
+    if(!Array.isArray(d))throw new Error("Geen projectenlijst");
+    const getName=p=>p.naam||p.projectnaam||p.project||p.locatie||p.klantnaam||p.objectnaam||p.projectNaam||p.name||"";
+    projectNames=[...new Set(d.map(getName).map(v=>String(v).trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"nl"));
+    projectsList.innerHTML=projectNames.map(p=>`<option value="${esc(p)}"></option>`).join("");
+    projectStatus.textContent=`${projectNames.length} projectlocaties beschikbaar uit Projectbeheer.`;renderProjectPicker(editingId?(employees().find(e=>e.id===editingId)?.projecten||[]):[]);
+  }catch(e){
+    projectStatus.textContent="Projectlocaties konden niet worden geladen; handmatig typen blijft mogelijk.";renderProjectPicker([]);
+  }
+}
+function configureDriveButtons(){
+  const active=Boolean(EMPLOYEEDATA_WEBAPP_URL);
+  loadDriveBtn.disabled=!active; saveDriveBtn.disabled=!active;
+  setSyncState(active?"Drive-sync gekoppeld.":"Drive-sync niet gekoppeld.",active?"ok":"error");
+}
+async function saveEmployeesToDrive(showMessage=true){
+  if(!EMPLOYEEDATA_WEBAPP_URL)return;
+  try{
+    setSyncState("Opslaan naar Drive…","busy");
+    await fetch(EMPLOYEEDATA_WEBAPP_URL,{method:"POST",mode:"no-cors",body:JSON.stringify({content:JSON.stringify(cleanEmployeesForExport(),null,2)})});
+    setSyncState("Opgeslagen om "+new Date().toLocaleTimeString("nl-NL"),"ok");
+    if(showMessage)showToast("Medewerkers opgeslagen naar Drive.");
+  }catch(e){
+    setSyncState("Opslaan mislukt.","error");
+    if(showMessage)showToast("Opslaan naar Drive mislukt.",true);
+  }
+}
+async function loadEmployeesFromDrive(auto=true){
+  if(!EMPLOYEEDATA_WEBAPP_URL)return;
+  try{
+    setSyncState("Laden uit Drive…","busy");
+    const res=await fetch(EMPLOYEEDATA_WEBAPP_URL+"?t="+Date.now());
+    const d=await res.json();
+    if(!Array.isArray(d))throw new Error("Drive-bestand bevat geen lijst.");
+    localStorage.setItem(KEY,JSON.stringify(d.map(normalizeEmployee)));
+    render();
+    setSyncState(`${d.length} medewerker(s) geladen om `+new Date().toLocaleTimeString("nl-NL"),"ok");
+    if(!auto)showToast(`${d.length} medewerker(s) geladen uit Drive.`);
+  }catch(e){
+    setSyncState("Laden uit Drive mislukt.","error");
+    if(!auto)showToast("Laden uit Drive mislukt.",true);
+  }
+}
+configureDriveButtons();render();renderProjectPicker([]);loadProjects();if(EMPLOYEEDATA_WEBAPP_URL)loadEmployeesFromDrive(true);
+</script>
+</body></html>
