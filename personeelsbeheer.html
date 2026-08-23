@@ -92,6 +92,11 @@ table{width:100%;border-collapse:collapse;margin-top:12px;background:white}th,td
 <details class="card" style="box-shadow:none;border:1px solid var(--line);margin-top:14px">
 <summary>🏢 Gekoppelde projecten (optioneel)</summary>
 <p class="small">Selecteer de projecten waar deze medewerker vast aan gekoppeld is. Dit staat los van het rooster.</p>
+<div class="actions" style="margin:8px 0">
+<input id="projectSearch" oninput="filterProjectPicker()" placeholder="Zoek op projectnaam" style="flex:1;min-width:210px">
+<button class="secondary" type="button" onclick="selectVisibleProjects(true)">Zichtbare selecteren</button>
+<button class="secondary" type="button" onclick="selectVisibleProjects(false)">Zichtbare wissen</button>
+</div>
 <div id="projectPicker" class="projectPicker"><div class="small">Projectlocaties worden geladen…</div></div>
 </details>
 
@@ -176,9 +181,12 @@ function renderProjectPicker(selected=[]){
   }
   const chosen=new Set((selected||[]).map(String));
   projectPicker.innerHTML=`<div class="projectPickerGrid">${projectNames.map(p=>`
-    <label class="projectOption"><input type="checkbox" class="projectCheck" value="${esc(p)}" ${chosen.has(p)?"checked":""}><span>${esc(p)}</span></label>
+    <label class="projectOption" data-project="${esc(p.toLowerCase())}"><input type="checkbox" class="projectCheck" value="${esc(p)}" ${chosen.has(p)?"checked":""}><span>${esc(p)}</span></label>
   `).join("")}</div>`;
+  filterProjectPicker();
 }
+function filterProjectPicker(){const q=(projectSearch.value||"").trim().toLowerCase();document.querySelectorAll(".projectOption").forEach(x=>x.style.display=!q||x.dataset.project.includes(q)?"flex":"none")}
+function selectVisibleProjects(checked){document.querySelectorAll(".projectOption").forEach(x=>{if(x.style.display!=="none")x.querySelector(".projectCheck").checked=checked})}
 function queueDriveSave(){
   clearTimeout(saveTimer);
   setSyncState("Wijziging lokaal opgeslagen; Drive volgt…","busy");
@@ -201,11 +209,11 @@ function collectRoster(){return [...document.querySelectorAll(".rosterRow")].map
 function saveEmployee(){
  if(!personeelsnr.value.trim()||!voornaam.value.trim()||!achternaam.value.trim()||!rayonleidster.value){alert("Vul personeelsnummer, voornaam, achternaam en rayonleidster in.");return}
  const nr=personeelsnr.value.trim();
- const item={id:editingId||Date.now().toString(36)+Math.random().toString(16).slice(2),personeelsnr:nr,voornaam:voornaam.value.trim(),achternaam:achternaam.value.trim(),rayonleidster:rayonleidster.value,telefoon:telefoon.value.trim(),email:email.value.trim(),functie:functie.value.trim(),contracturen:contracturen.value.trim(),startdatum:startdatum.value,status:status.value,opmerking:opmerking.value.trim(),rooster:collectRoster(),updated:new Date().toISOString()};
+ const item={id:editingId||Date.now().toString(36)+Math.random().toString(16).slice(2),personeelsnr:nr,voornaam:voornaam.value.trim(),achternaam:achternaam.value.trim(),rayonleidster:rayonleidster.value,telefoon:telefoon.value.trim(),email:email.value.trim(),functie:functie.value.trim(),contracturen:contracturen.value.trim(),startdatum:startdatum.value,status:status.value,opmerking:opmerking.value.trim(),projecten:selectedProjects(),rooster:collectRoster(),updated:new Date().toISOString()};
  let list=employees();if(list.some(x=>x.id!==editingId&&String(x.personeelsnr).trim()===nr)){alert("Dit personeelsnummer bestaat al.");return}
  const wasEditing=Boolean(editingId);if(editingId)list=list.map(x=>x.id===editingId?{...x,...item}:x);else list.unshift(item);setEmployees(list);clearForm();showToast(wasEditing?"Medewerker bijgewerkt.":"Medewerker opgeslagen.");
 }
-function clearForm(){editingId=null;editBanner.style.display="none";saveBtn.textContent="Medewerker opslaan";personeelsnr.value="";voornaam.value="";achternaam.value="";rayonleidster.value="";telefoon.value="";email.value="";functie.value="";contracturen.value="";startdatum.value="";status.value="actief";opmerking.value="";rosterRows.innerHTML=""}
+function clearForm(){editingId=null;editBanner.style.display="none";saveBtn.textContent="Medewerker opslaan";personeelsnr.value="";voornaam.value="";achternaam.value="";rayonleidster.value="";telefoon.value="";email.value="";functie.value="";contracturen.value="";startdatum.value="";status.value="actief";opmerking.value="";rosterRows.innerHTML="";projectSearch.value="";renderProjectPicker([])}
 function editEmployee(id){const x=employees().find(e=>e.id===id);if(!x)return;editingId=id;personeelsnr.value=x.personeelsnr||"";voornaam.value=x.voornaam||"";achternaam.value=x.achternaam||"";rayonleidster.value=x.rayonleidster||"";telefoon.value=x.telefoon||"";email.value=x.email||"";functie.value=x.functie||"";contracturen.value=x.contracturen||"";startdatum.value=x.startdatum||"";status.value=x.status||"actief";opmerking.value=x.opmerking||"";rosterRows.innerHTML="";(x.rooster||[]).forEach(addRosterRow);renderProjectPicker(x.projecten||[]);editBanner.style.display="block";saveBtn.textContent="Wijziging opslaan";window.scrollTo({top:0,behavior:"smooth"})}
 function deleteEmployee(id){const x=employees().find(e=>e.id===id);if(x&&confirm(`${employeeName(x)} verwijderen?`)){setEmployees(employees().filter(e=>e.id!==id));showToast("Medewerker verwijderd.")}}
 function deleteAll(){if(confirm("Alle medewerkers wissen? Dit wordt ook naar Drive gesynchroniseerd.")){setEmployees([]);showToast("Alle medewerkers gewist.")}}

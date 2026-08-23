@@ -65,7 +65,8 @@ table{width:100%;border-collapse:collapse} th,td{padding:11px;border-bottom:1px 
 <div class="grid2">
   <div>
     <label for="employee">Medewerker *</label>
-    <select id="employee"><option value="">Kies medewerker…</option></select>
+    <input id="employee" list="employeeList" placeholder="Kies of typ een naam">
+    <datalist id="employeeList"></datalist>
   </div>
   <div>
     <label for="reason">Reden *</label>
@@ -159,17 +160,17 @@ async function loadSources(){
     employees=await er.json();projects=await pr.json();
     employees=Array.isArray(employees)?employees:[];
     projects=Array.isArray(projects)?projects:[];
-    employee.innerHTML='<option value="">Kies medewerker…</option>'+employees
+    employeeList.innerHTML=employees
       .sort((a,b)=>fullName(a).localeCompare(fullName(b),"nl"))
-      .map(e=>`<option value="${esc(e.id)}">${esc(e.personeelsnr)} · ${esc(fullName(e))}</option>`).join("");
+      .map(e=>`<option value="${esc(fullName(e))}">${esc(e.personeelsnr||"")}</option>`).join("");
     render();
   }catch(e){showToast("Medewerkers of projecten konden niet worden geladen.",true)}
 }
 
-function selectedEmployee(){return employees.find(e=>e.id===employee.value)}
+function selectedEmployee(){const v=employee.value.trim().toLowerCase();return employees.find(e=>e.id===employee.value||fullName(e).toLowerCase()===v)}
 function updateEmployeeInfo(){
   const e=selectedEmployee();
-  if(!e){employeeInfo.innerHTML="Kies een medewerker om de gekoppelde projecten en het vaste rooster te zien.";return}
+  if(!e){employeeInfo.innerHTML=employee.value.trim()?"Deze naam staat nog niet in Personeelsbeheer. Je kunt de afwezigheid wel gewoon opslaan en diensten handmatig toevoegen.":"Kies of typ een medewerker. Bij een bekende medewerker worden projecten en het rooster getoond.";return}
   const ps=[...new Set([...(e.projecten||[]),...(e.rooster||[]).map(r=>r.project).filter(Boolean)])];
   employeeInfo.innerHTML=`<strong>${esc(fullName(e))}</strong> · ${esc(e.rayonleidster||"Geen rayonleidster")} · ${esc(e.contracturen||"0")} uur
   <div class="chips">${ps.length?ps.map(p=>`<span class="chip">${esc(p)}</span>`).join(""):'<span class="small">Geen projecten gekoppeld</span>'}</div>`;
@@ -219,23 +220,24 @@ function renderServices(){
     </div>
     <div class="service-grid">
       <label class="checkline"><input type="checkbox" ${r.replacementNeeded?"checked":""} onchange="updateService('${r.id}','replacementNeeded',this.checked)"> Vervanging nodig</label>
-      <div><label>Invaller</label><select onchange="updateService('${r.id}','replacementId',this.value)">
-        <option value="">Nog niet gekozen</option>${employees.filter(e=>e.id!==employee.value).map(e=>`<option value="${esc(e.id)}" ${r.replacementId===e.id?"selected":""}>${esc(fullName(e))}</option>`).join("")}
-      </select></div>
+      <div><label>Invaller</label><input list="replacementList" value="${esc(replacementName(r.replacementId))}" placeholder="Kies of typ een naam" onchange="updateService('${r.id}','replacementId',this.value.trim())"></div>
       <div><label>Status</label><select onchange="updateService('${r.id}','status',this.value)">
         ${["Open","Geregeld","Vervallen"].map(s=>`<option ${r.status===s?"selected":""}>${s}</option>`).join("")}
       </select></div>
     </div>
-  </div>`).join("")+`<datalist id="projectList">${projectOptions.map(p=>`<option value="${esc(p)}">`).join("")}</datalist>`;
+  </div>`).join("")+`<datalist id="projectList">${projectOptions.map(p=>`<option value="${esc(p)}">`).join("")}</datalist><datalist id="replacementList">${employees.map(e=>`<option value="${esc(fullName(e))}">`).join("")}</datalist>`;
 }
+
+function replacementName(value){const e=employees.find(x=>x.id===value);return e?fullName(e):(value||"")}
 
 function saveAbsence(){
   const e=selectedEmployee();
-  if(!e||!startDate.value||!endDate.value){showToast("Kies medewerker, begin- en einddatum.",true);return}
+  const typedName=employee.value.trim();
+  if(!typedName||!startDate.value||!endDate.value){showToast("Vul medewerker, begin- en einddatum in.",true);return}
   if(endDate.value<startDate.value){showToast("De einddatum ligt vóór de begindatum.",true);return}
   const item={
     id:editingId||((crypto.randomUUID&&crypto.randomUUID())||Date.now().toString(36)),
-    employeeId:e.id,employeeNumber:e.personeelsnr,employeeName:fullName(e),rayonleidster:e.rayonleidster||"",
+    employeeId:e?e.id:"",employeeNumber:e?e.personeelsnr:"",employeeName:e?fullName(e):typedName,rayonleidster:e?(e.rayonleidster||""):"",
     reason:reason.value,startDate:startDate.value,endDate:endDate.value,note:note.value.trim(),
     services:serviceRows,updated:new Date().toISOString()
   };
@@ -249,7 +251,7 @@ function clearForm(){
 }
 function editRecord(id){
   const x=records().find(r=>r.id===id);if(!x)return;
-  editingId=id;employee.value=x.employeeId;reason.value=x.reason;startDate.value=x.startDate;endDate.value=x.endDate;note.value=x.note||"";
+  editingId=id;employee.value=x.employeeName||x.employeeId||"";reason.value=x.reason;startDate.value=x.startDate;endDate.value=x.endDate;note.value=x.note||"";
   serviceRows=x.services||[];updateEmployeeInfo();renderServices();scrollTo({top:0,behavior:"smooth"});
 }
 function deleteRecord(id){if(confirm("Deze afwezigheid verwijderen?")){setRecords(records().filter(x=>x.id!==id));showToast("Verwijderd.")}}
