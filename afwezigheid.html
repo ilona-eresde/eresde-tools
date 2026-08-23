@@ -159,7 +159,7 @@ async function loadSources(){
     const [er,pr]=await Promise.all([fetch(EMPLOYEE_URL+"?t="+Date.now()),fetch(PROJECT_URL+"?t="+Date.now())]);
     employees=await er.json();projects=await pr.json();
     employees=Array.isArray(employees)?employees:[];
-    projects=Array.isArray(projects)?projects:[];
+    projects=Array.isArray(projects)?projects.filter(p=>(p.status||"actief")==="actief"):[];
     employeeList.innerHTML=employees
       .sort((a,b)=>fullName(a).localeCompare(fullName(b),"nl"))
       .map(e=>`<option value="${esc(fullName(e))}">${esc(e.personeelsnr||"")}</option>`).join("");

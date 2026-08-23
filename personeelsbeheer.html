@@ -402,7 +402,7 @@ async function loadProjects(){
     const d=await res.json();
     if(!Array.isArray(d))throw new Error("Geen projectenlijst");
     const getName=p=>p.naam||p.projectnaam||p.project||p.locatie||p.klantnaam||p.objectnaam||p.projectNaam||p.name||"";
-    projectNames=[...new Set(d.map(getName).map(v=>String(v).trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"nl"));
+    projectNames=[...new Set(d.filter(p=>(p.status||"actief")==="actief").map(getName).map(v=>String(v).trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"nl"));
     projectsList.innerHTML=projectNames.map(p=>`<option value="${esc(p)}"></option>`).join("");
     projectStatus.textContent=`${projectNames.length} projectlocaties beschikbaar uit Projectbeheer.`;renderProjectPicker(editingId?(employees().find(e=>e.id===editingId)?.projecten||[]):[]);
   }catch(e){

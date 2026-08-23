@@ -286,7 +286,7 @@ function normalizeProjectCode(s){
 }
 
 function setLoadedProjects(list){
-  loadedProjects = Array.isArray(list) ? list : [];
+  loadedProjects = Array.isArray(list) ? list.filter(p=>(p.status||"actief")==="actief") : [];
   localStorage.setItem(PROJECTS_KEY, JSON.stringify(loadedProjects));
   updateProjectsStatus();
   renderProjectSelect();

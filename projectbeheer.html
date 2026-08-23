@@ -36,7 +36,16 @@ th{background:#f9fafb;font-weight:900}
 .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
 .kpi{background:var(--soft);border-radius:13px;padding:11px;font-weight:900;text-align:center}.kpi .num{font-size:28px;color:var(--green)}
 @media(max-width:760px){.grid,.grid3,.qrGrid,.summary{grid-template-columns:1fr}button{width:100%}table,thead,tbody,tr,td,th{display:block}thead{display:none}tr{border:1px solid var(--line);border-radius:12px;margin:10px 0;padding:8px;background:white}td{border:0;padding:6px 4px}td:before{content:attr(data-label);display:block;font-weight:900;font-size:12px;color:#6b7280}.rowActions button{width:auto}}
-@media print{body{background:white}.noPrint{display:none!important}.card{box-shadow:none;border:0}.topbar,header{display:none}.qrGrid{grid-template-columns:repeat(3,1fr)}.qrCard{page-break-inside:avoid}}
+.printOnly{display:none}
+@page{size:A4 portrait;margin:8mm}
+@media print{
+  body{background:white}main{max-width:none;padding:0}.noPrint,.dashboardSection,.projectListSection{display:none!important}.topbar,header{display:none}
+  .qrSection{display:block!important;margin:0;padding:0;border:0;box-shadow:none}.qrSection h2{font-size:16pt;margin:0 0 1mm}.printOnly{display:block}.printMeta{font-size:9pt;color:#4b5563;margin:0 0 4mm}
+  .qrGrid{display:grid!important;grid-template-columns:repeat(3,1fr)!important;gap:3mm;margin:0}
+  .qrCard{height:62mm;border:.35mm solid #aeb6bf;border-radius:2.5mm;padding:2.5mm;text-align:center;page-break-inside:avoid;break-inside:avoid;overflow:hidden}
+  .qrBox{min-height:35mm;height:35mm}.qrBox img,.qrBox canvas{width:35mm!important;height:35mm!important}
+  .qrCard strong{font-size:10pt;line-height:1.12;margin-top:1.5mm;max-height:8mm;overflow:hidden}.qrCard .small{font-size:7.5pt;line-height:1.2}
+}
 
 .syncPill{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:7px 11px;background:#eef3d8;font-weight:800;font-size:13px}
 .syncDot{width:9px;height:9px;border-radius:50%;background:#91b600}.syncDot.busy{background:#f59e0b}.syncDot.error{background:#dc2626}
@@ -81,6 +90,7 @@ th{background:#f9fafb;font-weight:900}
       </select>
     </div>
     <div><label>Contactpersoon</label><input id="contact" placeholder="Optioneel"></div>
+    <div><label>Status</label><select id="projectStatus"><option value="actief">Actief</option><option value="inactief">Inactief</option></select></div>
     <div><label>Eigen code <span style="font-weight:400;color:#6b7280">(optioneel)</span></label><input id="customCode" placeholder="Leeg laten = automatisch"></div>
   </div>
   <label style="margin-top:12px">Opmerking</label>
@@ -96,7 +106,7 @@ th{background:#f9fafb;font-weight:900}
     </div>
 </section>
 
-<section class="card">
+<section class="card dashboardSection">
   <h2 style="margin:0 0 8px 0">Dashboard projecten</h2>
   <div class="summary">
     <div class="kpi"><div class="num" id="kpiTotal">0</div>projecten</div>
@@ -106,7 +116,7 @@ th{background:#f9fafb;font-weight:900}
   </div>
 </section>
 
-<section class="card">
+<section class="card projectListSection">
   <h2 style="margin:0 0 8px 0">Projectenlijst</h2>
   <div class="grid3 noPrint">
     <div><label>Zoeken</label><input id="zoek" oninput="render()" placeholder="Naam, projectnr, plaats"></div>
@@ -121,6 +131,7 @@ th{background:#f9fafb;font-weight:900}
         <option>Anders</option>
       </select>
     </div>
+    <div><label>Status</label><select id="filterProjectStatus" onchange="render()"><option value="actief">Actieve projecten</option><option value="inactief">Inactieve projecten</option><option value="">Alles</option></select></div>
     <div><label>&nbsp;</label><button class="secondary" onclick="printQr()">Print QR-overzicht</button></div>
   </div>
   <div class="actions noPrint">
@@ -136,8 +147,9 @@ th{background:#f9fafb;font-weight:900}
   <div id="tableWrap"></div>
 </section>
 
-<section class="card">
+<section class="card qrSection">
   <h2 style="margin:0 0 8px 0">QR-codes</h2>
+  <p id="printMeta" class="printOnly printMeta"></p>
   <p class="small noPrint">Print deze pagina of filter eerst op rayonleidster en print alleen die QR-codes.</p>
   <div id="qrWrap"></div>
 </section>
@@ -213,14 +225,14 @@ function makeCode(naam, projectnr, customCode){
 }
 function clearForm(){
   editingId=null;
-  naam.value=""; projectnr.value=""; plaats.value=""; rayonleidster.value=""; contact.value=""; opmerking.value=""; customCode.value="";
+  naam.value=""; projectnr.value=""; plaats.value=""; rayonleidster.value=""; contact.value=""; projectStatus.value="actief"; opmerking.value=""; customCode.value="";
 }
 function saveProject(){
   if(!naam.value.trim()){showToast("Vul minimaal project / klantnaam in.",true); return;}
   const item = {
     id: editingId || Date.now().toString(36)+Math.random().toString(16).slice(2),
     naam: naam.value.trim(), projectnr: projectnr.value.trim(), plaats: plaats.value.trim(),
-    rayonleidster: rayonleidster.value, contact: contact.value.trim(),
+    rayonleidster: rayonleidster.value, contact: contact.value.trim(), status:projectStatus.value,
     opmerking: opmerking.value.trim(), code: makeCode(naam.value, projectnr.value, customCode.value),
     updated: new Date().toISOString()
   };
@@ -235,7 +247,7 @@ function saveProject(){
 function editProject(id){
   const x = projects().find(p=>p.id===id); if(!x)return;
   editingId=id;
-  naam.value=x.naam||""; projectnr.value=x.projectnr||""; plaats.value=x.plaats||""; rayonleidster.value=x.rayonleidster||""; contact.value=x.contact||""; opmerking.value=x.opmerking||""; customCode.value=x.code||"";
+  naam.value=x.naam||""; projectnr.value=x.projectnr||""; plaats.value=x.plaats||""; rayonleidster.value=x.rayonleidster||""; contact.value=x.contact||""; projectStatus.value=x.status||"actief"; opmerking.value=x.opmerking||""; customCode.value=x.code||"";
   window.scrollTo({top:0,behavior:"smooth"});
 }
 function deleteProject(id){
@@ -252,8 +264,10 @@ function qrPayload(p){
 function filteredProjects(){
   const q=(zoek.value||"").toLowerCase();
   const fr=filterRayon.value;
+  const fs=filterProjectStatus.value;
   let list=projects().sort((a,b)=>(a.naam||"").localeCompare(b.naam||""));
   if(fr) list=list.filter(p=>p.rayonleidster===fr);
+  if(fs) list=list.filter(p=>(p.status||"actief")===fs);
   if(q) list=list.filter(p=>[p.naam,p.projectnr,p.plaats,p.contact,p.code,p.rayonleidster].join(" ").toLowerCase().includes(q));
   return list;
 }
@@ -267,11 +281,12 @@ function updateKpis(){
 }
 function renderTable(list){
   if(!list.length){tableWrap.innerHTML='<div class="empty">Geen projecten gevonden.</div>';return;}
-  tableWrap.innerHTML=`<table><thead><tr><th>Project</th><th>Projectnr</th><th>Plaats</th><th>Rayonleidster</th><th>Medewerkers</th><th>Code</th><th class="noPrint">Actie</th></tr></thead><tbody>${
+  tableWrap.innerHTML=`<table><thead><tr><th>Project</th><th>Status</th><th>Projectnr</th><th>Plaats</th><th>Rayonleidster</th><th>Medewerkers</th><th>Code</th><th class="noPrint">Actie</th></tr></thead><tbody>${
     list.map(p=>{
       const linked=employeesForProject(p);
       return `<tr>
       <td data-label="Project"><button class="clickableName" onclick="openProjectCard('${p.id}')">${esc(p.naam)}</button></td>
+      <td data-label="Status"><span class="badge ${(p.status||'actief')==='inactief'?'warn':''}">${(p.status||'actief')==='inactief'?'Inactief':'Actief'}</span></td>
       <td data-label="Projectnr">${esc(p.projectnr)}</td>
       <td data-label="Plaats">${esc(p.plaats)}</td>
       <td data-label="Rayonleidster"><span class="badge ${p.rayonleidster?'':'warn'}">${esc(p.rayonleidster||'Niet ingevuld')}</span></td>
@@ -286,6 +301,7 @@ function renderTable(list){
   }</tbody></table>`;
 }
 function renderQr(list){
+  printMeta.textContent=`${list.length} project${list.length===1?"":"en"}${filterRayon.value?" · Rayonleidster: "+filterRayon.value:""}${filterProjectStatus.value?" · "+(filterProjectStatus.value==='actief'?'Actief':'Inactief'):""}`;
   qrWrap.innerHTML = `<div class="qrGrid">${
     list.map(p=>`<div class="qrCard">
       <div class="qrBox" id="qr_${p.id}"></div>
@@ -377,6 +393,7 @@ function normalizeImportedProject(p){
     plaats: String(plaats).trim(),
     rayonleidster: String(rayonleidster).trim(),
     contact: String(contact).trim(),
+    status: p.status==="inactief"?"inactief":"actief",
     opmerking: String(opmerking).trim(),
     code,
     updated: new Date().toISOString()
@@ -488,6 +505,7 @@ function cleanProjectsForExport(){
     plaats:p.plaats,
     rayonleidster:p.rayonleidster,
     contact:p.contact,
+    status:p.status||"actief",
     opmerking:p.opmerking,
     code:p.code,
     updated:p.updated||new Date().toISOString()

@@ -150,7 +150,7 @@ async function fetchJSON(url){
 }
 async function loadReferenceData(){
   const results=await Promise.allSettled([fetchJSON(CONFIG.PROJECTS_API),fetchJSON(CONFIG.EMPLOYEES_API)]);
-  if(results[0].status==='fulfilled') projects=normalizeArray(results[0].value,['projects','projecten','items']).filter(p=>projectName(p));
+  if(results[0].status==='fulfilled') projects=normalizeArray(results[0].value,['projects','projecten','items']).filter(p=>projectName(p)&&(p.status||'actief')==='actief');
   if(results[1].status==='fulfilled') employees=normalizeArray(results[1].value,['employees','medewerkers','personeel','items']).filter(e=>employeeName(e));
   projects.sort((a,b)=>projectName(a).localeCompare(projectName(b),'nl'));
   employees.sort((a,b)=>employeeName(a).localeCompare(employeeName(b),'nl'));
