@@ -1,60 +1,24 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Eresde Tools</title>
-<style>
-body{
-font-family:Arial,sans-serif;
-background:#f5f5f5;
-text-align:center;
-padding:40px;
-}
-h1{
-color:#95c11f;
-}
-a{
-display:block;
-margin:20px auto;
-padding:20px;
-width:300px;
-background:#95c11f;
-color:white;
-text-decoration:none;
-border-radius:10px;
-font-size:22px;
-font-weight:bold;
-}
-</style>
-</head>
-<body>
-
-<h1>Eresde Tools</h1>
-
-<a href="schoonmaakcontrole-.html">
-  📋 Schoonmaakcontrole
-</a>
-<a href="afwezigheid.html">
-🏖️ Afwezigheid & Vervanging
-</a>
-<a href="invallerslogboek_v3_drive_sync.html">
-  👥 Invallerslogboek
-</a>
-<a href="projectbezoeken.html">
-  📅 Projectbezoeken
-</a>
-<a href="bestellijst_v3_drive_sync.html">
-  📦 Bestellijst
-</a>
-<a href="personeelsbeheer.html">
-  👥 Personeelsbeheer
-</a>
-<a href="projectbeheer.html">
-  📁 Projectbeheer
-</a>
-
-<a href="schepen_facturatie_v1.html">
-    🚢 Schepen Facturatie
-</a>
-</body>
-</html>
+<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Eresde Tools</title>
+<style>:root{--g:#95c11f;--d:#1d2732;--bg:#f3f5f7;--line:#e0e5e9;--muted:#66727d}*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--d)}header{background:var(--d);color:#fff;padding:24px 16px}header div,main{max-width:1100px;margin:auto}h1{margin:0;color:var(--g)}header p{margin:7px 0 0;color:#dbe1e5}main{padding:22px 15px 45px}h2{font-size:20px}.stats,.tools{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;text-decoration:none;color:inherit;box-shadow:0 2px 8px #17212b0b}.card:hover{box-shadow:0 5px 14px #17212b18}.num{font-size:30px;font-weight:900}.label{font-weight:800;margin-top:3px}.hint,.tool span{display:block;color:var(--muted);font-size:13px;margin-top:5px;line-height:1.35}.red{color:#dc2626}.orange{color:#f59e0b}.blue{color:#2563eb}.quick{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:25px}.quick a{padding:11px 14px;border-radius:10px;background:var(--g);color:#fff;text-decoration:none;font-weight:800}.tools{grid-template-columns:repeat(3,1fr)}.tool{min-height:130px}.tool b{display:block;font-size:17px;margin-top:8px}.icon{font-size:28px}.legacy{opacity:.72}.notice{display:none;background:#fff5cd;border:1px solid #ecd474;border-radius:10px;padding:11px;margin-bottom:16px}@media(max-width:800px){.stats{grid-template-columns:repeat(2,1fr)}.tools{grid-template-columns:repeat(2,1fr)}}@media(max-width:520px){.stats,.tools{grid-template-columns:1fr}.quick a{flex:1 1 45%;text-align:center}}</style></head>
+<body><header><div><h1>Eresde Tools</h1><p id="date">Jouw werkoverzicht en hulpmiddelen</p></div></header><main>
+<div class="notice" id="notice">Open Afwezigheid en Bestellijst één keer op dit apparaat om deze tellers bij te werken.</div>
+<h2>Wat heeft aandacht?</h2><section class="stats">
+<a class="card" href="acties.html"><div class="num red" id="late">0</div><div class="label">Achterstallige acties</div><div class="hint">Deadline verstreken</div></a>
+<a class="card" href="acties.html"><div class="num orange" id="today">0</div><div class="label">Acties vandaag</div><div class="hint">Open taken voor vandaag</div></a>
+<a class="card" href="afwezigheid.html"><div class="num red" id="replace">0</div><div class="label">Open vervangingen</div><div class="hint">Nog geen invaller geregeld</div></a>
+<a class="card" href="bestellijst_v3_drive_sync.html"><div class="num blue" id="orders">0</div><div class="label">Open bestellingen</div><div class="hint">Nog niet besteld</div></a></section>
+<h2>Snel toevoegen</h2><nav class="quick"><a href="acties.html?nieuw=1">＋ Actie of melding</a><a href="afwezigheid.html">＋ Afwezigheid</a><a href="projectbezoeken.html">＋ Projectbezoek</a><a href="bestellijst_v3_drive_sync.html">＋ Bestelling</a><a href="schoonmaakcontrole-.html">▶ Controle</a></nav>
+<h2>Alle tools</h2><section class="tools">
+<a class="card tool" href="acties.html"><i class="icon">✅</i><b>Acties & Meldingen</b><span>Werkmeldingen, afspraken en deadlines.</span></a>
+<a class="card tool" href="afwezigheid.html"><i class="icon">🏖️</i><b>Afwezigheid & Vervanging</b><span>Afwezigheid, diensten en vervanging.</span></a>
+<a class="card tool" href="projectbezoeken.html"><i class="icon">📅</i><b>Projectbezoeken</b><span>Bezoeken plannen en terugvinden.</span></a>
+<a class="card tool" href="schoonmaakcontrole-.html"><i class="icon">📋</i><b>Schoonmaakcontrole</b><span>Controle uitvoeren en opslaan.</span></a>
+<a class="card tool" href="bestellijst_v3_drive_sync.html"><i class="icon">📦</i><b>Bestellijst</b><span>Aanvragen en bestellingen afhandelen.</span></a>
+<a class="card tool" href="personeelsbeheer.html"><i class="icon">👥</i><b>Personeelsbeheer</b><span>Centrale medewerkerslijst.</span></a>
+<a class="card tool" href="projectbeheer.html"><i class="icon">📁</i><b>Projectbeheer</b><span>Projectlijst, koppelingen en QR.</span></a>
+<a class="card tool" href="schepen_facturatie_v1.html"><i class="icon">🚢</i><b>Schepen Facturatie</b><span>Weekregistratie en rapportages.</span></a>
+<a class="card tool legacy" href="invallerslogboek_v3_drive_sync.html"><i class="icon">👥</i><b>Invallerslogboek (ouder)</b><span>Voorlopig behouden naast Afwezigheid.</span></a></section>
+</main><script>
+const read=k=>{try{let x=JSON.parse(localStorage.getItem(k)||'[]');return Array.isArray(x)?x:[]}catch{return[]}},day=()=>{let d=new Date();return new Date(d-d.getTimezoneOffset()*60000).toISOString().slice(0,10)};
+function refresh(){let d=day(),a=read('eresde_acties_v1').filter(x=>x.status!=='Afgerond');late.textContent=a.filter(x=>x.deadline&&x.deadline<d).length;today.textContent=a.filter(x=>x.deadline===d).length;replace.textContent=read('eresde_afwezigheid_v1').flatMap(x=>x.services||[]).filter(x=>x.replacementNeeded&&x.status==='Open').length;orders.textContent=read('bestellijst_v1').filter(x=>x.status!=='Besteld').length;notice.style.display=(!localStorage.getItem('eresde_afwezigheid_v1')||!localStorage.getItem('bestellijst_v1'))?'block':'none';date.textContent=new Date().toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long'})+' · Jouw werkoverzicht'}refresh();addEventListener('pageshow',refresh);
+</script></body></html>
