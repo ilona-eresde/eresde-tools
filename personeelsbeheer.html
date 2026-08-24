@@ -20,7 +20,7 @@ textarea{min-height:70px}button{font-size:18px;padding:13px 16px;border:0;border
 table{width:100%;border-collapse:collapse;margin-top:12px;background:white}th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;font-size:14px;vertical-align:top}th{background:#f9fafb;font-weight:900}
 .empty{padding:20px;text-align:center;color:#6b7280;font-weight:700}.rowActions button{font-size:13px;padding:7px 9px;margin:2px}
 .editBanner{display:none;background:var(--warn);color:var(--warnText);font-weight:900;border-radius:12px;padding:10px;margin-bottom:12px}
-.rosterRow{display:grid;grid-template-columns:1.1fr 2fr 1fr 1fr auto;gap:8px;align-items:end;margin:8px 0;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fafafa}
+.rosterRow{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:end;margin:8px 0;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fafafa}.dayPicker{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}.dayChoice{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:7px 10px;background:#fff;font-size:13px;font-weight:800}.dayChoice input{width:auto;margin:0}
 .rosterRow button{font-size:14px;padding:10px}.required{color:#b91c1c}details summary{cursor:pointer;font-weight:900;font-size:18px}
 .syncPill{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:7px 11px;background:#eef3d8;font-weight:800;font-size:13px}
 .syncDot{width:9px;height:9px;border-radius:50%;background:#91b600}.syncDot.busy{background:#f59e0b}.syncDot.error{background:#dc2626}
@@ -198,14 +198,17 @@ function setEmployees(list,sync=true){localStorage.setItem(KEY,JSON.stringify(li
 function employeeName(x){return [x.voornaam,x.achternaam].filter(Boolean).join(" ").trim()}
 function addRosterRow(data={}){
  const row=document.createElement("div");row.className="rosterRow";
- row.innerHTML=`<div><label>Dag</label><select class="rDag"><option value="">Kies dag...</option>${["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag","Zondag"].map(d=>`<option ${data.dag===d?"selected":""}>${d}</option>`).join("")}</select></div>
+ const selected=new Set(Array.isArray(data.dagen)&&data.dagen.length?data.dagen:(data.dag?[data.dag]:[]));
+ row.innerHTML=`<div class="dayPicker"><label style="width:100%;margin:0">Werkdagen</label>${["Maandag","Dinsdag","Woensdag","Donderdag","Vrijdag","Zaterdag","Zondag"].map(d=>`<label class="dayChoice"><input type="checkbox" class="rDay" value="${d}" ${selected.has(d)?"checked":""}>${d.slice(0,2)}</label>`).join("")}</div>
  <div><label>Project</label><input class="rProject" list="projectsList" value="${esc(data.project||"")}" placeholder="Typ om een project te zoeken" autocomplete="off"><div class="small">Kies bij voorkeur een locatie uit Projectbeheer.</div></div>
  <div><label>Begin</label><input class="rBegin" type="time" value="${esc(data.begin||"")}"></div>
  <div><label>Eind</label><input class="rEind" type="time" value="${esc(data.eind||"")}"></div>
  <div><button class="danger" type="button" onclick="this.closest('.rosterRow').remove()">Verwijder</button></div>`;
  rosterRows.appendChild(row);
 }
-function collectRoster(){return [...document.querySelectorAll(".rosterRow")].map(r=>({dag:r.querySelector(".rDag").value,project:r.querySelector(".rProject").value.trim(),begin:r.querySelector(".rBegin").value,eind:r.querySelector(".rEind").value})).filter(r=>r.dag||r.project||r.begin||r.eind)}
+function rosterDays(r){return Array.isArray(r.dagen)&&r.dagen.length?r.dagen:(r.dag?[r.dag]:[])}
+function formatDays(r){return rosterDays(r).map(d=>d.slice(0,2)).join(", ")}
+function collectRoster(){return [...document.querySelectorAll(".rosterRow")].map(r=>{const dagen=[...r.querySelectorAll(".rDay:checked")].map(x=>x.value);return{dagen,dag:dagen[0]||"",project:r.querySelector(".rProject").value.trim(),begin:r.querySelector(".rBegin").value,eind:r.querySelector(".rEind").value}}).filter(r=>r.dagen.length||r.project||r.begin||r.eind)}
 function saveEmployee(){
  if(!personeelsnr.value.trim()||!voornaam.value.trim()||!achternaam.value.trim()||!rayonleidster.value){alert("Vul personeelsnummer, voornaam, achternaam en rayonleidster in.");return}
  const nr=personeelsnr.value.trim();
@@ -225,8 +228,8 @@ function updateKpis(){
   const hours=l.filter(x=>(x.status||"actief")==="actief").reduce((s,x)=>s+(parseFloat(String(x.contracturen||"").replace(",","."))||0),0);
   kpiHours.textContent=Number.isInteger(hours)?hours:hours.toFixed(2).replace(".",",");
 }
-function filteredEmployees(){const q=(zoek.value||"").toLowerCase(),fr=filterRayon.value,fs=filterStatus.value;let l=[...employees()].sort((a,b)=>employeeName(a).localeCompare(employeeName(b),"nl"));if(fr)l=l.filter(x=>x.rayonleidster===fr);if(fs)l=l.filter(x=>(x.status||"actief")===fs);if(q)l=l.filter(x=>[x.personeelsnr,employeeName(x),x.telefoon,x.email,x.functie,x.rayonleidster,...(x.rooster||[]).map(r=>r.dag+" "+r.project)].join(" ").toLowerCase().includes(q));return l}
-function rosterSummary(x){const r=x.rooster||[];if(!r.length)return"Geen rooster";return r.slice(0,3).map(v=>`${esc(v.dag||"")} · ${esc(v.project||"")}${v.begin||v.eind?` (${esc(v.begin||"?")}–${esc(v.eind||"?")})`:""}`).join("<br>")+(r.length>3?`<br><span class="small">+ ${r.length-3} extra regel(s)</span>`:"")}
+function filteredEmployees(){const q=(zoek.value||"").toLowerCase(),fr=filterRayon.value,fs=filterStatus.value;let l=[...employees()].sort((a,b)=>employeeName(a).localeCompare(employeeName(b),"nl"));if(fr)l=l.filter(x=>x.rayonleidster===fr);if(fs)l=l.filter(x=>(x.status||"actief")===fs);if(q)l=l.filter(x=>[x.personeelsnr,employeeName(x),x.telefoon,x.email,x.functie,x.rayonleidster,...(x.rooster||[]).map(r=>rosterDays(r).join(" ")+" "+r.project)].join(" ").toLowerCase().includes(q));return l}
+function rosterSummary(x){const r=x.rooster||[];if(!r.length)return"Geen rooster";return r.slice(0,3).map(v=>`${esc(formatDays(v))} · ${esc(v.project||"")}${v.begin||v.eind?` (${esc(v.begin||"?")}–${esc(v.eind||"?")})`:""}`).join("<br>")+(r.length>3?`<br><span class="small">+ ${r.length-3} extra regel(s)</span>`:"")}
 
 function openEmployeeCard(id){
   const x=employees().find(e=>e.id===id); if(!x)return;
@@ -263,7 +266,7 @@ function openEmployeeCard(id){
     </div>
     <div id="tabRoster" class="tabPanel">
       ${roster.length?`<table class="detailRoster"><thead><tr><th>Dag</th><th>Project</th><th>Begin</th><th>Eind</th></tr></thead><tbody>
-        ${roster.map(r=>`<tr><td>${esc(r.dag)||"—"}</td><td>${esc(r.project)||"—"}</td><td>${esc(r.begin)||"—"}</td><td>${esc(r.eind)||"—"}</td></tr>`).join("")}
+        ${roster.map(r=>`<tr><td>${esc(formatDays(r))||"—"}</td><td>${esc(r.project)||"—"}</td><td>${esc(r.begin)||"—"}</td><td>${esc(r.eind)||"—"}</td></tr>`).join("")}
       </tbody></table>`:'<div class="empty">Geen vast rooster ingevuld.</div>'}
     </div>
     <div id="tabProjects" class="tabPanel">
@@ -341,7 +344,7 @@ function exportEmployeePdf(id){
   doc.autoTable({
     startY:y+3,
     head:[["Dag","Project","Begin","Eind"]],
-    body:roster.length?roster.map(r=>[r.dag||"—",r.project||"—",r.begin||"—",r.eind||"—"]):[["—","Geen vast rooster","—","—"]],
+    body:roster.length?roster.map(r=>[formatDays(r)||"—",r.project||"—",r.begin||"—",r.eind||"—"]):[["—","Geen vast rooster","—","—"]],
     theme:"grid",
     headStyles:{fillColor:green,textColor:[255,255,255],fontStyle:"bold"},
     styles:{fontSize:8.5,cellPadding:2,lineColor:[217,222,231]},

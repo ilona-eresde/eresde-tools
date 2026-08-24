@@ -152,7 +152,18 @@ function configuredDrive(){return ABSENCE_URL.startsWith("https://script.google.
 function isoToday(){return new Date().toISOString().slice(0,10)}
 function dateNl(s){return s?new Date(s+"T00:00:00").toLocaleDateString("nl-NL"):"—"}
 function dayName(s){return ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"][new Date(s+"T00:00:00").getDay()]}
-function normalizeDay(v){return String(v||"").trim().toLowerCase().replace("don","donderdag").replace("din","dinsdag").replace("woe","woensdag").replace("vri","vrijdag").replace("maa","maandag")}
+function normalizeDay(v){
+  const s=String(v||"").trim().toLowerCase().replace(/[^a-z]/g,"");
+  if(s.startsWith("ma"))return "maandag";
+  if(s.startsWith("di"))return "dinsdag";
+  if(s.startsWith("wo"))return "woensdag";
+  if(s.startsWith("do"))return "donderdag";
+  if(s.startsWith("vr"))return "vrijdag";
+  if(s.startsWith("za"))return "zaterdag";
+  if(s.startsWith("zo"))return "zondag";
+  return s;
+}
+function rosterDays(r){return Array.isArray(r.dagen)&&r.dagen.length?r.dagen:(r.dag?[r.dag]:[])}
 
 async function loadSources(){
   try{
@@ -187,7 +198,7 @@ function generateServices(){
   const roster=e.rooster||[],generated=[];
   for(const date of datesBetween(startDate.value,endDate.value)){
     const dn=dayName(date);
-    roster.filter(r=>normalizeDay(r.dag)===dn).forEach(r=>generated.push({
+    roster.filter(r=>rosterDays(r).some(d=>normalizeDay(d)===dn)).forEach(r=>generated.push({
       id:crypto.randomUUID?crypto.randomUUID():Date.now()+Math.random(),
       date,project:r.project||"",begin:r.begin||"",end:r.eind||"",
       replacementNeeded:true,replacementId:"",status:"Open",note:""
