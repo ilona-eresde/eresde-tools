@@ -146,15 +146,47 @@ function employeeName(e){return e.name||e.naam||e.fullName||e.volledigeNaam||[e.
 function employeeId(e){return String(e.id||e.employeeId||e.medewerkerId||e.personeelsnummer||employeeName(e))}
 
 async function fetchJSON(url){
-  const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error(`HTTP ${r.status}`); return r.json();
+  const r=await fetch(url,{cache:'no-store',redirect:'follow'});
+  if(!r.ok) throw new Error(`HTTP ${r.status}`);
+  const raw=await r.text();
+  const trimmed=raw.trim();
+  if(!trimmed) throw new Error('Lege reactie van Drive');
+  if(trimmed.startsWith('<')) throw new Error('Drive gaf een webpagina terug in plaats van JSON');
+  try{return JSON.parse(trimmed)}catch(e){throw new Error('Ongeldige JSON uit Drive')}
+}
+
+function loadProjectsLocalFallback(){
+  for(const key of ['eresde_projecten_v2','eresde_projecten_v1']){
+    try{
+      const list=JSON.parse(localStorage.getItem(key)||'[]');
+      if(Array.isArray(list)&&list.length) return list;
+    }catch(e){}
+  }
+  return [];
 }
 async function loadReferenceData(){
-  const results=await Promise.allSettled([fetchJSON(CONFIG.PROJECTS_API),fetchJSON(CONFIG.EMPLOYEES_API)]);
-  if(results[0].status==='fulfilled') projects=normalizeArray(results[0].value,['projects','projecten','items']).filter(p=>projectName(p)&&(p.status||'actief')==='actief');
-  if(results[1].status==='fulfilled') employees=normalizeArray(results[1].value,['employees','medewerkers','personeel','items']).filter(e=>employeeName(e));
+  const results=await Promise.allSettled([fetchJSON(CONFIG.PROJECTS_API+'?t='+Date.now()),fetchJSON(CONFIG.EMPLOYEES_API+'?t='+Date.now())]);
+
+  if(results[0].status==='fulfilled'){
+    projects=normalizeArray(results[0].value,['projects','projecten','items']).filter(p=>projectName(p)&&(p.status||'actief')==='actief');
+  }else{
+    projects=loadProjectsLocalFallback().filter(p=>projectName(p)&&(p.status||'actief')==='actief');
+  }
+
+  if(results[1].status==='fulfilled'){
+    employees=normalizeArray(results[1].value,['employees','medewerkers','personeel','items']).filter(e=>employeeName(e));
+  }
+
   projects.sort((a,b)=>projectName(a).localeCompare(projectName(b),'nl'));
   employees.sort((a,b)=>employeeName(a).localeCompare(employeeName(b),'nl'));
   fillReferenceSelects();
+
+  if(results[0].status==='rejected'){
+    $('configNotice').classList.remove('hide');
+    $('configNotice').textContent = projects.length
+      ? 'Projecten-Drive reageert niet goed. Daarom gebruik ik tijdelijk de projecten die Projectbeheer op dit apparaat heeft opgeslagen.'
+      : 'Projecten konden niet uit Drive worden geladen. Open Projectbeheer op dit apparaat en probeer daarna opnieuw, of herstel de projecten-Drive-koppeling.';
+  }
 }
 function loadLocal(){try{visits=JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY)||'[]');if(!Array.isArray(visits))visits=[]}catch{visits=[]}}
 function saveLocal(){localStorage.setItem(CONFIG.STORAGE_KEY,JSON.stringify(visits));}
@@ -174,7 +206,8 @@ async function syncDrive(){
   if(!CONFIG.VISITS_API){setSync('Alleen lokaal','warn');return}
   try{
     setSync('Opslaan…','warn');
-    await fetch(CONFIG.VISITS_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({visits,updatedAt:new Date().toISOString()})});
+    const r=await fetch(CONFIG.VISITS_API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({visits,updatedAt:new Date().toISOString())});
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
     setSync('Opgeslagen in Drive','ok');
   }catch(e){setSync('Lokaal opgeslagen','err')}
 }
