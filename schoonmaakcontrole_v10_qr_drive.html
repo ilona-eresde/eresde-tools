@@ -22,16 +22,21 @@ button{font-size:18px;padding:13px 16px;border:0;border-radius:12px;font-weight:
 .smallBtn{font-size:15px;padding:9px 11px}
 .roomHead{display:flex;gap:10px;align-items:center;justify-content:space-between}
 .roomTitle{font-size:22px;font-weight:900}
-.point{border-top:1px solid var(--line);padding:8px 0}
+.point{border-top:1px solid var(--line);padding:7px 0}
 .point:first-child{border-top:0}
-.pointTop{display:grid;grid-template-columns:1.3fr .7fr;gap:10px;align-items:end}
-.opts{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:10px}
+.pointRow,.pointLabels{display:grid;grid-template-columns:minmax(125px,1fr) repeat(4,48px) 36px;gap:6px;align-items:center}
+.pointLabels{margin-top:12px;padding:0 0 6px;font-size:13px;font-weight:900;text-align:center;color:#4b5563}
+.pointLabels span:first-child{text-align:left}
+.pname{font-size:16px;padding:10px 34px 10px 10px}
+.opts{display:contents}
 .opts input{display:none}
-.opts label{font-size:15px;text-align:center;padding:13px 4px;border-radius:12px;border:2px solid var(--line);font-weight:900;margin:0}
+.opts label{font-size:16px;line-height:42px;height:42px;text-align:center;padding:0;border-radius:10px;border:2px solid var(--line);font-weight:900;margin:0;cursor:pointer;box-sizing:border-box}
 .opts input:checked + label.goed{background:#dcfce7;border-color:var(--goed)}
 .opts input:checked + label.vuil{background:#fee2e2;border-color:var(--vuil)}
 .opts input:checked + label.methode{background:#fef3c7;border-color:var(--methode)}
 .opts input:checked + label.periodiek{background:#dbeafe;border-color:var(--periodiek)}
+.removePoint{width:36px;height:36px;padding:0!important;border-radius:9px;font-size:18px!important;line-height:36px}
+.legend{font-size:14px;font-weight:800;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-top:10px;line-height:1.5}
 .issueNote{display:none;margin-top:10px}
 .summary{font-size:20px;font-weight:900;line-height:1.5}
 .scoreBig{font-size:34px;color:var(--green);font-weight:900}
@@ -42,10 +47,10 @@ canvas{width:100%;height:110px;border:2px dashed var(--line);border-radius:12px;
 .conceptItem{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:#fff;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
 .scannerBox{display:none;border:2px dashed var(--line);border-radius:14px;padding:10px;margin-top:10px;background:#fff}.scannerBox.active{display:block}.scannerStatus{font-size:13px;color:#6b7280;margin-top:8px;font-weight:700}
 .conceptItem strong{display:block}.conceptActions{display:flex;gap:8px;flex-wrap:wrap}.conceptActions button{font-size:14px;padding:8px 10px}
-@media(max-width:700px){.grid,.pointTop{grid-template-columns:1fr}button{width:100%}.opts{grid-template-columns:1fr 1fr}.roomHead{align-items:flex-start}.opts label{font-size:16px}}
+@media(max-width:700px){.grid{grid-template-columns:1fr}button{width:100%}.roomHead{align-items:flex-start}.pointRow,.pointLabels{grid-template-columns:minmax(76px,1fr) repeat(4,36px) 28px;gap:3px}.opts label{font-size:14px;line-height:38px;height:38px}.removePoint{width:28px!important;height:28px;line-height:28px}.pname{font-size:14px;padding:8px 24px 8px 6px}}
 @media print{ .printSummary{display:block!important} header img{height:40px} 
  body{background:white}.noPrint{display:none!important}.card{box-shadow:none;border:1px solid #ddd;break-inside:avoid}header{color:#111;background:white;border-bottom:4px solid var(--green)}
- input,select,textarea{border:0;padding:4px;font-size:14px}.opts label{padding:5px;font-size:12px}.roomTitle{font-size:16px}.point{padding:7px 0}
+ input,select,textarea{border:0;padding:4px;font-size:14px}.opts label{height:25px;line-height:25px;font-size:12px}.roomTitle{font-size:16px}.point{padding:5px 0}.pointRow,.pointLabels{grid-template-columns:minmax(150px,1fr) repeat(4,35px);gap:3px}.removePoint,.pointLabels span:last-child{display:none!important}
  .issueNote{display:block!important}
 }
 </style>
@@ -59,7 +64,7 @@ canvas{width:100%;height:110px;border:2px dashed var(--line);border-radius:12px;
     ← Terug naar Dashboard
   </a>
 </div>
-<header>Schoonmaakcontrole <span style="font-size:14px;font-weight:700;opacity:.9">v10 QR Drive</span></header>
+<header>Schoonmaakcontrole <span style="font-size:14px;font-weight:700;opacity:.9">v10 QR Drive · G/V/M/P</span></header>
 <main>
 <section class="card">
   <div class="grid">
@@ -113,6 +118,7 @@ canvas{width:100%;height:110px;border:2px dashed var(--line);border-radius:12px;
     Kwaliteitsscore: <span class="scoreBig" id="percent">0%</span><br>
     <span id="score">0 controlepunten</span>
   </div>
+  <div class="legend">G = Goed &nbsp;·&nbsp; V = Vuil &nbsp;·&nbsp; M = Methodefout &nbsp;·&nbsp; P = Periodiek</div>
   <p class="small">Goed staat standaard aan. Je hoeft tijdens de controle dus alleen afwijkingen aan te tikken.</p>
   <label>Algemene opmerkingen</label>
   <textarea id="generalNotes" placeholder="Typ hier algemene opmerkingen..."></textarea>
@@ -174,7 +180,7 @@ function addRoom(data={}){
   div.className="card room"; div.dataset.id=id;
   div.innerHTML=`
     <div class="roomHead">
-      <div><div class="roomTitle">Ruimte ${roomCount}</div><span class="badge">Goed staat standaard aan</span></div>
+      <div><div class="roomTitle">Ruimte ${roomCount}</div><span class="badge">G staat standaard aan</span></div>
       <button class="danger noPrint smallBtn" onclick="this.closest('.room').remove();calcScore()">Verwijder ruimte</button>
     </div>
     <div class="grid" style="margin-top:12px">
@@ -183,8 +189,9 @@ function addRoom(data={}){
         ${Object.keys(presets).map(t=>`<option ${t===type?'selected':''}>${t}</option>`).join("")}
       </select></div>
     </div>
+    <div class="pointLabels" aria-hidden="true"><span>Controlepunt</span><span>G</span><span>V</span><span>M</span><span>P</span><span></span></div>
     <div class="points"></div>
-    <div class="actions noPrint"><button class="secondary smallBtn" onclick="addPoint(this.closest('.room'))">+ Extra punt toevoegen</button></div>
+    <div class="actions noPrint"><button class="primary smallBtn" onclick="setAllGood(this.closest('.room'))">Alles G</button><button class="secondary smallBtn" onclick="addPoint(this.closest('.room'))">+ Extra punt</button></div>
     <label>Opmerkingen ruimte</label>
     <textarea class="rnotes" >${esc(data.notes)}</textarea>`;
   rooms.appendChild(div);
@@ -204,15 +211,15 @@ function addPoint(room, data={}){
   const div=document.createElement("div");
   div.className="point";
   div.innerHTML=`
-    <div class="pointTop">
-      <div><label>Controlepunt</label>${pointSelectHtml(data.name||"")}</div>
-      <div class="noPrint"><button class="danger smallBtn" onclick="this.closest('.point').remove();calcScore()">Verwijder punt</button></div>
-    </div>
-    <div class="opts">
-      <input type="radio" name="${name}" value="Goed" id="${name}g" ${result==="Goed"?'checked':''} onchange="toggleNote(this);calcScore()"><label class="goed" for="${name}g">Goed</label>
-      <input type="radio" name="${name}" value="Vuil" id="${name}v" ${result==="Vuil"?'checked':''} onchange="toggleNote(this);calcScore()"><label class="vuil" for="${name}v">Vuil</label>
-      <input type="radio" name="${name}" value="Methode" id="${name}m" ${result==="Methode"?'checked':''} onchange="toggleNote(this);calcScore()"><label class="methode" for="${name}m">Methode</label>
-      <input type="radio" name="${name}" value="Periodiek" id="${name}p" ${result==="Periodiek"?'checked':''} onchange="toggleNote(this);calcScore()"><label class="periodiek" for="${name}p">Periodiek</label>
+    <div class="pointRow">
+      ${pointSelectHtml(data.name||"")}
+      <div class="opts">
+        <input type="radio" name="${name}" value="Goed" id="${name}g" ${result==="Goed"?'checked':''} onchange="toggleNote(this);calcScore()"><label class="goed" for="${name}g" title="Goed">G</label>
+        <input type="radio" name="${name}" value="Vuil" id="${name}v" ${result==="Vuil"?'checked':''} onchange="toggleNote(this);calcScore()"><label class="vuil" for="${name}v" title="Vuil">V</label>
+        <input type="radio" name="${name}" value="Methode" id="${name}m" ${result==="Methode"?'checked':''} onchange="toggleNote(this);calcScore()"><label class="methode" for="${name}m" title="Methodefout">M</label>
+        <input type="radio" name="${name}" value="Periodiek" id="${name}p" ${result==="Periodiek"?'checked':''} onchange="toggleNote(this);calcScore()"><label class="periodiek" for="${name}p" title="Periodiek">P</label>
+      </div>
+      <button class="danger removePoint noPrint" title="Controlepunt verwijderen" aria-label="Controlepunt verwijderen" onclick="this.closest('.point').remove();calcScore()">×</button>
     </div>
     <div class="issueNote">
       <label>Opmerking bij afwijking</label>
@@ -228,6 +235,15 @@ function refreshPointNote(point){
   note.style.display = checked && checked.value!=="Goed" ? "block" : "none";
 }
 function toggleNote(input){refreshPointNote(input.closest(".point"));}
+
+function setAllGood(room){
+  room.querySelectorAll('.point').forEach(point=>{
+    const good=point.querySelector('input[value="Goed"]');
+    if(good) good.checked=true;
+    refreshPointNote(point);
+  });
+  calcScore();
+}
 
 function applyPreset(room){
   if(!confirm("Standaard controlepunten voor dit type ruimte laden? Bestaande punten in deze ruimte worden vervangen.")) return;
